@@ -12,23 +12,9 @@ plugins:
   - jekyll-sitemap
   - jekyll-seo-tag
 
-# Navigation
-navigation:
-  - title: Home
-    url: /
-  - title: Documentation
-    url: /docs/
-  - title: Examples
-    url: /examples/
-  - title: GitHub
-    url: https://github.com/mootwise-matt/arx-lang
-
 # Build settings
 markdown: kramdown
 highlighter: rouge
-sass:
-  sass_dir: _sass
-  style: compressed
 
 # Exclude files from processing
 exclude:
