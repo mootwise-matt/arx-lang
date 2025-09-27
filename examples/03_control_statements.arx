@@ -1,0 +1,61 @@
+// ARX Control Statements Example
+// Demonstrates: Comparison operators, logical operators, expressions
+// Note: IF/WHILE/FOR statements are planned but not yet implemented
+module ControlStatementsDemo;
+
+class App
+  procedure Main
+  begin
+    writeln('=== ARX Control Statements Demo ===');
+    writeln('Note: Control flow statements (IF/WHILE/FOR) are planned but not yet implemented');
+    writeln('');
+    
+    // Comparison operators
+    writeln('=== Comparison Operators ===');
+    integer x;
+    integer y;
+    x = 10;
+    y = 20;
+    
+    writeln('x = ' + x + ', y = ' + y);
+    
+    // Note: These expressions work but control flow doesn't yet
+    // if (x == y) then writeln('x equals y');
+    // if (x != y) then writeln('x does not equal y');
+    // if (x < y) then writeln('x is less than y');
+    // if (x > y) then writeln('x is greater than y');
+    
+    writeln('Comparison expressions (control flow not yet implemented):');
+    writeln('x == y would be: ' + x + ' == ' + y);
+    writeln('x != y would be: ' + x + ' != ' + y);
+    writeln('x < y would be: ' + x + ' < ' + y);
+    writeln('x > y would be: ' + x + ' > ' + y);
+    writeln('x <= y would be: ' + x + ' <= ' + y);
+    writeln('x >= y would be: ' + x + ' >= ' + y);
+    
+    writeln('');
+    
+    // Logical operators (boolean literals not yet implemented)
+    writeln('=== Logical Operators ===');
+    writeln('Note: Boolean literals (true/false) are planned but not yet implemented');
+    writeln('Logical operators (and, or, not) will work with boolean expressions');
+    
+    writeln('');
+    
+    // Arithmetic expressions that would be used in control flow
+    writeln('=== Arithmetic for Control Flow ===');
+    integer counter;
+    counter = 1;
+    writeln('Counter starts at: ' + counter);
+    
+    counter = counter + 1;
+    writeln('Counter after increment: ' + counter);
+    
+    counter = counter * 2;
+    writeln('Counter after doubling: ' + counter);
+    
+    writeln('');
+    writeln('=== Control Statements Demo Complete ===');
+    writeln('Future: IF/WHILE/FOR statements will enable conditional execution and loops');
+  end;
+end;

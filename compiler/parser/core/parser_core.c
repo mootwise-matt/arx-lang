@@ -1,16 +1,19 @@
 /*
- * ARX Parser Implementation
- * Builds Abstract Syntax Tree from token stream
+ * ARX Core Parser Implementation
+ * Handles core parser functionality, initialization, and utility functions
  */
 
-#include "parser.h"
+#include "parser_core.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
+// External debug flag
 extern bool debug_mode;
 
-/*
+// Forward declaration for parse_class (defined in parser.c)
+ast_node_t* parse_class(parser_context_t *context);
+
 bool parser_init(parser_context_t *context, lexer_context_t *lexer)
 {
     if (context == NULL || lexer == NULL) {
@@ -47,9 +50,7 @@ bool parser_init(parser_context_t *context, lexer_context_t *lexer)
     
     return true;
 }
-*/
 
-/*
 ast_node_t* parser_parse(parser_context_t *context)
 {
     if (context == NULL || context->lexer == NULL) {
@@ -78,9 +79,7 @@ ast_node_t* parser_parse(parser_context_t *context)
     
     return context->root;
 }
-*/
 
-/*
 void parser_cleanup(parser_context_t *context)
 {
     if (context != NULL) {
@@ -123,103 +122,7 @@ void parser_cleanup(parser_context_t *context)
         memset(context, 0, sizeof(parser_context_t));
     }
 }
-*/
 
-/*
-ast_node_t* ast_create_node(ast_node_type_t type)
-{
-    ast_node_t *node = malloc(sizeof(ast_node_t));
-    if (node == NULL) {
-        return NULL;
-    }
-    
-    node->type = type;
-    node->value = NULL;
-    node->number = 0;
-    node->children = NULL;
-    node->child_count = 0;
-    node->child_capacity = 0;
-    node->line_number = 0;
-    node->column_number = 0;
-    
-    return node;
-}
-
-void ast_add_child(ast_node_t *parent, ast_node_t *child)
-{
-    if (parent == NULL || child == NULL) {
-        return;
-    }
-    
-    // Resize children array if needed
-    if (parent->child_count >= parent->child_capacity) {
-        size_t new_capacity = parent->child_capacity == 0 ? 4 : parent->child_capacity * 2;
-        ast_node_t **new_children = realloc(parent->children, new_capacity * sizeof(ast_node_t*));
-        if (new_children == NULL) {
-            return; // Memory allocation failed
-        }
-        parent->children = new_children;
-        parent->child_capacity = new_capacity;
-    }
-    
-    parent->children[parent->child_count] = child;
-    parent->child_count++;
-}
-
-void ast_set_value(ast_node_t *node, const char *value)
-{
-    if (node == NULL) {
-        return;
-    }
-    
-    if (node->value != NULL) {
-        free(node->value);
-    }
-    
-    if (value != NULL) {
-        node->value = malloc(strlen(value) + 1);
-        if (node->value != NULL) {
-            strcpy(node->value, value);
-        }
-    } else {
-        node->value = NULL;
-    }
-}
-
-void ast_set_number(ast_node_t *node, uint64_t number)
-{
-    if (node != NULL) {
-        node->number = number;
-    }
-}
-
-void ast_destroy_node(ast_node_t *node)
-{
-    if (node == NULL) {
-        return;
-    }
-    
-    // Destroy children
-    for (size_t i = 0; i < node->child_count; i++) {
-        ast_destroy_node(node->children[i]);
-    }
-    
-    // Free children array
-    if (node->children != NULL) {
-        free(node->children);
-    }
-    
-    // Free value
-    if (node->value != NULL) {
-        free(node->value);
-    }
-    
-    // Free node
-    free(node);
-}
-*/
-
-/*
 bool parse_module(parser_context_t *context)
 {
     if (debug_mode) {
@@ -282,32 +185,7 @@ bool parse_module(parser_context_t *context)
     
     return true;
 }
-*/
 
-
-
-/*
-ast_node_t* parse_expression(parser_context_t *context)
-{
-    if (debug_mode) {
-        printf("Parsing expression\n");
-    }
-    
-    return parse_logical_or(context);
-}
-*/
-
-/*
-ast_node_t* parse_logical_or(parser_context_t *context)
-{
-    // For now, just parse additive expressions (arithmetic with + and -)
-    // TODO: Implement full logical operator precedence
-    return parse_additive(context);
-}
-*/
-
-
-/*
 bool match_token(parser_context_t *context, token_t expected)
 {
     if (context == NULL || context->lexer == NULL) {
@@ -364,10 +242,7 @@ bool advance_token(parser_context_t *context)
     
     return lexer_next(context->lexer);
 }
-*/
 
-
-/*
 bool add_symbol_to_current_scope(parser_context_t *context, symbol_t *symbol)
 {
     if (context == NULL || symbol == NULL) {
@@ -455,4 +330,3 @@ void parser_clear_method_strings(parser_context_t *context)
         printf("Cleared method string literals\n");
     }
 }
-*/

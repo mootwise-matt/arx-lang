@@ -1,12 +1,23 @@
+// ARX Hello World Example
+// Demonstrates: Basic module structure, string literals, output
 module HelloWorld;
 
 class App
   procedure Main
   begin
-    string str;
-    str = 'Hello World!';
+    // Declare and initialize a string variable
+    string greeting;
+    greeting = 'Hello World!';
     
-    writeln(str);
+    // Output the string variable
+    writeln(greeting);
+    
+    // Output a string literal directly
     writeln('Welcome to ARX programming language!');
+    
+    // Demonstrate string concatenation
+    string message;
+    message = 'ARX is a modern, object-oriented programming language.';
+    writeln(message);
   end;
 end;

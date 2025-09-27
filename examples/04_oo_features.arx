@@ -1,32 +1,114 @@
-// ARX Object-Oriented Features Demo
-// Demonstrates: Method calls and field access
+// ARX Object-Oriented Features Example
+// Demonstrates: Classes, inheritance, constructors, methods, field access
 module OOFeaturesDemo;
 
 class App
   procedure Main
   begin
-    writeln('=== ARX OO Features Demo ===');
+    writeln('=== ARX Object-Oriented Features Demo ===');
     
-    // Test method call
-    writeln('Testing method call:');
+    // Create Person objects
+    writeln('Creating Person objects...');
     Person person1;
     person1 = new Person;
-    writeln(person1.getName());
     
-    // Test field access
-    writeln('Testing field access:');
-    writeln(person1.name);
+    Person person2;
+    person2 = new Person;
     
-    writeln('=== Demo Complete ===');
+    // Access fields and call methods
+    writeln('Person 1 name: ' + person1.getName());
+    writeln('Person 1 age: ' + person1.getAge());
+    
+    writeln('Person 2 name: ' + person2.getName());
+    writeln('Person 2 age: ' + person2.getAge());
+    
+    writeln('');
+    
+    // Create Student objects (inheritance)
+    writeln('Creating Student objects (inheritance)...');
+    Student student1;
+    student1 = new Student;
+    
+    Student student2;
+    student2 = new Student;
+    
+    // Access inherited and new fields/methods
+    writeln('Student 1 name: ' + student1.getName());
+    writeln('Student 1 age: ' + student1.getAge());
+    writeln('Student 1 major: ' + student1.getMajor());
+    
+    writeln('Student 2 name: ' + student2.getName());
+    writeln('Student 2 age: ' + student2.getAge());
+    writeln('Student 2 major: ' + student2.getMajor());
+    
+    writeln('');
+    
+    // Demonstrate method calls (parameters not yet implemented)
+    writeln('Testing method calls...');
+    writeln('Note: Method parameters are planned but not yet implemented');
+    writeln('Person 1: ' + person1.getName() + ', age ' + person1.getAge());
+    writeln('Student 1: ' + student1.getName() + ', age ' + student1.getAge() + ', major ' + student1.getMajor());
+    
+    writeln('=== OO Features Demo Complete ===');
   end;
 end;
 
-// Person class with method and field
+// Base class: Person
 class Person
   string name;
+  integer age;
   
-  procedure getName
+  // Constructor
+  procedure init
   begin
-    name = "John Doe";
+    name = "Unknown";
+    age = 0;
+  end;
+  
+  // Getter methods
+  procedure getName : string
+  begin
+    return name;
+  end;
+  
+  procedure getAge : integer
+  begin
+    return age;
+  end;
+  
+  // Setter methods (parameters not yet implemented)
+  procedure setName
+  begin
+    name = "Updated Name";
+  end;
+  
+  procedure setAge
+  begin
+    age = 25;
+  end;
+end;
+
+// Derived class: Student extends Person
+class Student extends Person
+  string major;
+  
+  // Constructor
+  procedure init
+  begin
+    name = "Student";
+    age = 18;
+    major = "Undeclared";
+  end;
+  
+  // Additional getter method
+  procedure getMajor : string
+  begin
+    return major;
+  end;
+  
+  // Additional setter method (parameters not yet implemented)
+  procedure setMajor
+  begin
+    major = "Updated Major";
   end;
 end;

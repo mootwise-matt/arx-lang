@@ -11,79 +11,15 @@
 #include "../types/types.h"
 #include "../symbols/symbols.h"
 #include "../common/opcodes.h"
+#include "ast/ast.h"
+#include "core/parser_core.h"
+#include "expressions/expressions.h"
+#include "statements/statements.h"
+#include "object_oriented/object_oriented.h"
+#include "types/parser_types.h"
 
 // Forward declarations
-typedef struct ast_node ast_node_t;
 typedef struct parser_context parser_context_t;
-
-// AST Node types
-typedef enum {
-    AST_NONE = 0,
-    AST_MODULE,
-    AST_CLASS,
-    AST_FIELD,
-    AST_METHOD,
-    AST_PROCEDURE,
-    AST_FUNCTION,
-    AST_VAR_DECL,
-    AST_ASSIGNMENT,
-    AST_METHOD_CALL,
-    AST_FIELD_ACCESS,
-    AST_NEW_EXPR,
-    AST_LITERAL,
-    AST_IDENTIFIER,
-    AST_BINARY_OP,
-    AST_UNARY_OP,
-    AST_IF_STMT,
-    AST_WHILE_STMT,
-    AST_FOR_STMT,
-    AST_RETURN_STMT,
-    AST_BLOCK,
-    AST_EXPR_STMT
-} ast_node_type_t;
-
-// AST Node structure
-struct ast_node {
-    ast_node_type_t type;
-    char *value;                    // String value (for identifiers, literals)
-    uint64_t number;               // Numeric value (for literals)
-    ast_node_t **children;         // Array of child node pointers
-    size_t child_count;            // Number of children
-    size_t child_capacity;         // Capacity of children array
-    int line_number;               // Source line number
-    int column_number;             // Source column number
-};
-
-// Parser context
-struct parser_context {
-    lexer_context_t *lexer;        // Lexer context
-    ast_node_t *root;              // Root of AST
-    ast_node_t *current_node;      // Current node being built
-    symbol_table_t symbol_table;   // Symbol table
-    int error_count;               // Number of errors encountered
-    bool in_error_recovery;        // Error recovery mode
-    char *current_string_literal;  // Current string literal being parsed
-    char *current_new_class;       // Current NEW expression class name
-    int constructor_param_count;   // Number of constructor parameters
-    bool has_constructor_params;   // Whether constructor has parameters
-    
-    // String literals collection for code generation
-    char **method_string_literals; // Array of string literals found in current method
-    size_t method_string_count;    // Number of string literals collected
-    size_t method_string_capacity; // Capacity of string literals array
-};
-
-// Function prototypes
-bool parser_init(parser_context_t *context, lexer_context_t *lexer);
-ast_node_t* parser_parse(parser_context_t *context);
-void parser_cleanup(parser_context_t *context);
-
-// AST node management
-ast_node_t* ast_create_node(ast_node_type_t type);
-void ast_add_child(ast_node_t *parent, ast_node_t *child);
-void ast_set_value(ast_node_t *node, const char *value);
-void ast_set_number(ast_node_t *node, uint64_t number);
-void ast_destroy_node(ast_node_t *node);
 
 // Parsing functions
 bool parse_module(parser_context_t *context);

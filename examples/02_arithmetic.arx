@@ -1,23 +1,62 @@
+// ARX Arithmetic Operations Example
+// Demonstrates: Integer arithmetic, operator precedence, string concatenation
 module ArithmeticDemo;
 
 class App
   procedure Main
   begin
-    writeln('=== ARX Arithmetic Demo ===');
-    writeln('Calculation: (2000 * 3) / 4 = ');
+    writeln('=== ARX Arithmetic Operations Demo ===');
     
+    // Basic arithmetic operations
+    integer a;
+    integer b;
+    integer c;
     integer result;
-    result = (2000 * 3) / 4;
-    writeln('Result: ' + result);
-
+    a = 10;
+    b = 5;
+    c = 3;
+    
+    // Addition
+    result = a + b;
+    writeln('Addition: ' + a + ' + ' + b + ' = ' + result);
+    
+    // Subtraction
+    result = a - b;
+    writeln('Subtraction: ' + a + ' - ' + b + ' = ' + result);
+    
+    // Multiplication
+    result = a * b;
+    writeln('Multiplication: ' + a + ' * ' + b + ' = ' + result);
+    
+    // Division
+    result = a / b;
+    writeln('Division: ' + a + ' / ' + b + ' = ' + result);
+    
+    // Modulo
+    result = a % c;
+    writeln('Modulo: ' + a + ' % ' + c + ' = ' + result);
+    
+    // Exponentiation
+    result = a ^ c;
+    writeln('Exponentiation: ' + a + ' ^ ' + c + ' = ' + result);
+    
     writeln('');
-
-    writeln('Calculation: (15 ^ 3) % 4 = ');
     
-    integer result;
-    result = (15 ^ 3) % 4;
-    writeln('Result: ' + result);
+    // Complex expressions with operator precedence
+    writeln('=== Complex Expressions ===');
     
-    writeln('=== Demo Complete ===');
+    // Parentheses control precedence
+    result = (a + b) * c;
+    writeln('With parentheses: (' + a + ' + ' + b + ') * ' + c + ' = ' + result);
+    
+    // Without parentheses (multiplication first)
+    result = a + b * c;
+    writeln('Without parentheses: ' + a + ' + ' + b + ' * ' + c + ' = ' + result);
+    
+    // Multiple operations
+    result = (2000 * 3) / 4;
+    writeln('Complex calculation: (2000 * 3) / 4 = ' + result);
+    
+    writeln('=== Arithmetic Demo Complete ===');
   end;
 end;
