@@ -1,31 +1,7 @@
 title: ARX Programming Language
 description: A Pascal-inspired, object-oriented programming language with a virtual machine target
-author: Matthew White
-email: matthewwhite@example.com
 url: "https://mootwise-matt.github.io"
 baseurl: "/arx-lang"
 
 # GitHub Pages settings
 remote_theme: minima
-plugins:
-  - jekyll-feed
-  - jekyll-sitemap
-  - jekyll-seo-tag
-
-# Build settings
-markdown: kramdown
-highlighter: rouge
-
-# Exclude files from processing
-exclude:
-  - README.md
-  - LICENSE
-  - archive/
-  - build/
-  - compiler/
-  - vm/
-  - examples/*.arx
-  - examples/*.arxmod
-  - build.sh
-  - Makefile
-  - DEVELOPMENT_ROADMAP.md
