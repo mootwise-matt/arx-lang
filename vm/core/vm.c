@@ -479,8 +479,15 @@ bool vm_execute_operation(arx_vm_context_t *vm, opr_t operation, uint8_t level, 
             {
                 uint64_t str2_id, str1_id;
                 if (vm_pop(vm, &str2_id) && vm_pop(vm, &str1_id)) {
+                    if (vm->debug_mode) {
+                        printf("OPR_STR_CONCAT: str1_id=%llu, str2_id=%llu, string_count=%zu\n", 
+                               (unsigned long long)str1_id, (unsigned long long)str2_id, vm->string_table.string_count);
+                    }
                     const char *str1, *str2;
                     if (vm_load_string(vm, str1_id, &str1) && vm_load_string(vm, str2_id, &str2)) {
+                        if (vm->debug_mode) {
+                            printf("OPR_STR_CONCAT: str1='%s', str2='%s'\n", str1 ? str1 : "(null)", str2 ? str2 : "(null)");
+                        }
                         // Simple concatenation for now
                         char *result = malloc(strlen(str1) + strlen(str2) + 1);
                         if (result != NULL) {
@@ -488,11 +495,31 @@ bool vm_execute_operation(arx_vm_context_t *vm, opr_t operation, uint8_t level, 
                             strcat(result, str2);
                             uint64_t result_id;
                             if (vm_store_string(vm, result, &result_id)) {
+                                if (vm->debug_mode) {
+                                    printf("OPR_STR_CONCAT: stored result='%s' with id=%llu, new string_count=%zu\n", 
+                                           result, (unsigned long long)result_id, vm->string_table.string_count);
+                                }
                                 free(result);
                                 return vm_push(vm, result_id);
+                            } else {
+                                if (vm->debug_mode) {
+                                    printf("OPR_STR_CONCAT: FAILED to store result string\n");
+                                }
+                                free(result);
                             }
-                            free(result);
+                        } else {
+                            if (vm->debug_mode) {
+                                printf("OPR_STR_CONCAT: FAILED to allocate memory for result\n");
+                            }
                         }
+                    } else {
+                        if (vm->debug_mode) {
+                            printf("OPR_STR_CONCAT: FAILED to load input strings\n");
+                        }
+                    }
+                } else {
+                    if (vm->debug_mode) {
+                        printf("OPR_STR_CONCAT: FAILED to pop string IDs from stack\n");
                     }
                 }
                 return false;
@@ -805,7 +832,19 @@ bool vm_load_string(arx_vm_context_t *vm, uint64_t string_id, const char **strin
 
 bool vm_store_string(arx_vm_context_t *vm, const char *string, uint64_t *string_id)
 {
-    if (vm == NULL || string == NULL || vm->string_table.string_count >= vm->string_table.string_capacity) {
+    if (vm == NULL || string == NULL) {
+        if (vm && vm->debug_mode) {
+            printf("vm_store_string: NULL parameter (vm=%p, string=%p)\n", (void*)vm, (void*)string);
+        }
+        last_error = VM_ERROR_INVALID_ADDRESS;
+        return false;
+    }
+    
+    if (vm->string_table.string_count >= vm->string_table.string_capacity) {
+        if (vm->debug_mode) {
+            printf("vm_store_string: String table full (count=%zu, capacity=%zu)\n", 
+                   vm->string_table.string_count, vm->string_table.string_capacity);
+        }
         last_error = VM_ERROR_STRING_TABLE_FULL;
         return false;
     }
@@ -813,6 +852,9 @@ bool vm_store_string(arx_vm_context_t *vm, const char *string, uint64_t *string_
     size_t len = strlen(string) + 1;
     vm->string_table.strings[vm->string_table.string_count] = malloc(len);
     if (vm->string_table.strings[vm->string_table.string_count] == NULL) {
+        if (vm->debug_mode) {
+            printf("vm_store_string: Failed to allocate memory for string (len=%zu)\n", len);
+        }
         return false;
     }
     
@@ -820,6 +862,11 @@ bool vm_store_string(arx_vm_context_t *vm, const char *string, uint64_t *string_
     
     if (string_id != NULL) {
         *string_id = vm->string_table.string_count;
+    }
+    
+    if (vm->debug_mode) {
+        printf("vm_store_string: Stored string='%s' with id=%zu (new count=%zu)\n", 
+               string, vm->string_table.string_count, vm->string_table.string_count + 1);
     }
     
     vm->string_table.string_count++;

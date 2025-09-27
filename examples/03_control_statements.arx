@@ -84,11 +84,68 @@ class App
     while_counter = 0;  // Exit condition
   end;
   
-  writeln('');
-  writeln('=== Control Statements Demo Complete ===');
-  writeln('FOR loops are fully working! Both loop termination and body execution are working correctly.');
-  writeln('WHILE loops are working for basic conditions (variables, literals).');
-  writeln('Note: Comparison operators (<, <=, >, >=) in expressions are planned for future implementation.');
-  writeln('IF statements are planned for future implementation.');
+           writeln('');
+           
+           // IF Statement demonstration
+           writeln('=== IF Statement Example ===');
+           writeln('Basic IF statement:');
+           
+           integer test_value;
+           test_value = 1;
+           
+           if test_value then
+           begin
+             writeln('IF condition is true (value = 1)');
+           end;
+           
+           writeln('');
+           writeln('IF with ELSE:');
+           
+           test_value = 0;
+           if test_value then
+           begin
+             writeln('This should not print');
+           else
+             writeln('ELSE condition executed (value = 0)');
+           end;
+           
+           writeln('');
+           writeln('IF with ELSEIF and ELSE:');
+           
+           test_value = 2;
+           if test_value == 1 then
+           begin
+             writeln('IF condition encountered');
+           elseif test_value == 2 then
+             writeln('ELSEIF condition encountered');
+           else
+             writeln('ELSE condition encountered');
+           end;
+           
+           writeln('');
+           writeln('IF with Relational Operators:');
+           
+           integer score;
+           score = 85;
+           
+           if score >= 90 then
+           begin
+             writeln('Grade: A (score >= 90)');
+           elseif score >= 80 then
+             writeln('Grade: B (score >= 80)');
+           elseif score >= 70 then
+             writeln('Grade: C (score >= 70)');
+           elseif score >= 60 then
+             writeln('Grade: D (score >= 60)');
+           else
+             writeln('Grade: F (score < 60)');
+           end;
+           
+           writeln('');
+           writeln('=== Control Statements Demo Complete ===');
+           writeln('FOR loops are fully working! Both loop termination and body execution are working correctly.');
+           writeln('WHILE loops are working for basic conditions (variables, literals).');
+           writeln('IF statements are fully working! IF, ELSEIF, and ELSE clauses all execute correctly.');
+           writeln('Comparison operators (<, <=, >, >=) are now fully implemented!');
   end;
 end;

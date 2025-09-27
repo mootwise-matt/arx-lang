@@ -23,9 +23,10 @@ ast_node_t* parse_expression(parser_context_t *context)
 
 ast_node_t* parse_logical_or(parser_context_t *context)
 {
-    // For now, just parse additive expressions (arithmetic with + and -)
+    // Parse logical OR expressions (||)
+    // For now, just parse equality expressions
     // TODO: Implement full logical operator precedence
-    return parse_additive(context);
+    return parse_equality_ast(context);
 }
 
 bool parse_logical_and(parser_context_t *context)
@@ -46,6 +47,52 @@ bool parse_logical_and(parser_context_t *context)
     return true;
 }
 
+ast_node_t* parse_equality_ast(parser_context_t *context)
+{
+    // Parse equality expressions (== and !=)
+    ast_node_t *left = parse_relational_ast(context);
+    if (!left) {
+        return NULL;
+    }
+    
+    while (match_token(context, TOK_EQUAL) || match_token(context, TOK_NEQ)) {
+        int op = context->lexer->token;
+        if (!advance_token(context)) {
+            ast_destroy_node(left);
+            return NULL;
+        }
+        
+        ast_node_t *right = parse_relational_ast(context);
+        if (!right) {
+            ast_destroy_node(left);
+            return NULL;
+        }
+        
+        // Create binary operation node
+        ast_node_t *binary_op = ast_create_node(AST_BINARY_OP);
+        if (!binary_op) {
+            ast_destroy_node(left);
+            ast_destroy_node(right);
+            return NULL;
+        }
+        
+        // Set the operator
+        if (op == TOK_EQUAL) {
+            ast_set_value(binary_op, "==");
+        } else if (op == TOK_NEQ) {
+            ast_set_value(binary_op, "!=");
+        }
+        
+        // Add children
+        ast_add_child(binary_op, left);
+        ast_add_child(binary_op, right);
+        
+        left = binary_op;
+    }
+    
+    return left;
+}
+
 bool parse_equality(parser_context_t *context)
 {
     if (!parse_relational(context)) {
@@ -62,6 +109,57 @@ bool parse_equality(parser_context_t *context)
     }
     
     return true;
+}
+
+ast_node_t* parse_relational_ast(parser_context_t *context)
+{
+    // Parse relational expressions (<, <=, >, >=)
+    ast_node_t *left = parse_additive(context);
+    if (!left) {
+        return NULL;
+    }
+    
+    while (match_token(context, TOK_LESS) || match_token(context, TOK_LEQ) ||
+           match_token(context, TOK_GREATER) || match_token(context, TOK_GEQ)) {
+        int op = context->lexer->token;
+        if (!advance_token(context)) {
+            ast_destroy_node(left);
+            return NULL;
+        }
+        
+        ast_node_t *right = parse_additive(context);
+        if (!right) {
+            ast_destroy_node(left);
+            return NULL;
+        }
+        
+        // Create binary operation node
+        ast_node_t *binary_op = ast_create_node(AST_BINARY_OP);
+        if (!binary_op) {
+            ast_destroy_node(left);
+            ast_destroy_node(right);
+            return NULL;
+        }
+        
+        // Set the operator
+        if (op == TOK_LESS) {
+            ast_set_value(binary_op, "<");
+        } else if (op == TOK_LEQ) {
+            ast_set_value(binary_op, "<=");
+        } else if (op == TOK_GREATER) {
+            ast_set_value(binary_op, ">");
+        } else if (op == TOK_GEQ) {
+            ast_set_value(binary_op, ">=");
+        }
+        
+        // Add children
+        ast_add_child(binary_op, left);
+        ast_add_child(binary_op, right);
+        
+        left = binary_op;
+    }
+    
+    return left;
 }
 
 bool parse_relational(parser_context_t *context)

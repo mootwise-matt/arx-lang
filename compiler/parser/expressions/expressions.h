@@ -17,6 +17,8 @@ typedef struct parser_context parser_context_t;
 // Expression Parsing Functions
 ast_node_t* parse_expression(parser_context_t *context);
 ast_node_t* parse_logical_or(parser_context_t *context);
+ast_node_t* parse_equality_ast(parser_context_t *context);
+ast_node_t* parse_relational_ast(parser_context_t *context);
 bool parse_logical_and(parser_context_t *context);
 bool parse_equality(parser_context_t *context);
 bool parse_relational(parser_context_t *context);

@@ -60,6 +60,7 @@ typedef enum
     TOK_THEN,
     TOK_ODD,
     TOK_ELSE,
+    TOK_ELSEIF,
     TOK_SHR,
     TOK_SHL,
     TOK_SAR,

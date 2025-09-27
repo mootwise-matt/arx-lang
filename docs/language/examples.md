@@ -34,9 +34,9 @@ module VariableIntegration;
 class App
   procedure Main
   begin
-    result: integer;
-    result := 25;
-    WriteLn('Result: ' + result);
+    integer result;
+    result = 25;
+    writeln('Result: ' + result);
   end;
 end;
 ```
@@ -48,21 +48,21 @@ module ArithmeticIntegration;
 class App
   procedure Main
   begin
-    a: integer;
-    b: integer;
-    result: integer;
+    integer a;
+    integer b;
+    integer result;
     
-    a := 10;
-    b := 5;
+    a = 10;
+    b = 5;
     
-    result := a + b;
-    WriteLn('Addition: ' + result);
+    result = a + b;
+    writeln('Addition: ' + result);
     
-    result := a * b;
-    WriteLn('Multiplication: ' + result);
+    result = a * b;
+    writeln('Multiplication: ' + result);
     
-    result := (a + b) * 2;
-    WriteLn('Complex: ' + result);
+    result = (a + b) * 2;
+    writeln('Complex: ' + result);
   end;
 end;
 ```
@@ -225,6 +225,93 @@ class Person
   function getName(): string
   begin
     return name;
+  end;
+end;
+```
+
+## Assignment vs Comparison Operators
+
+ARX uses C-style operators for clarity and consistency:
+
+### Assignment Operator (`=`)
+```arx
+module AssignmentDemo;
+
+class App
+  procedure Main
+  begin
+    integer x;
+    string name;
+    
+    // Assignment: assigns values to variables
+    x = 10;           // Assigns 10 to x
+    name = "Alice";   // Assigns "Alice" to name
+    
+    writeln('x = ' + x);
+    writeln('name = ' + name);
+  end;
+end;
+```
+
+### Comparison Operator (`==`)
+```arx
+module ComparisonDemo;
+
+class App
+  procedure Main
+  begin
+    integer x;
+    string name;
+    
+    x = 10;
+    name = "Alice";
+    
+    // Comparison: compares values for equality
+    if x == 10 then
+    begin
+      writeln('x equals 10');
+    end;
+    
+    if name == "Alice" then
+    begin
+      writeln('Hello Alice!');
+    end;
+    
+    if x == 5 then
+    begin
+      writeln('This will not print');
+    else
+      writeln('x is not equal to 5');
+    end;
+  end;
+end;
+```
+
+### Combined Example
+```arx
+module AssignmentComparisonDemo;
+
+class App
+  procedure Main
+  begin
+    integer score;
+    string grade;
+    
+    // Assignment
+    score = 85;
+    
+    // Comparison in IF statement
+    if score == 85 then
+    begin
+      grade = "B+";  // Assignment
+    elseif score == 90 then
+      grade = "A-";  // Assignment
+    else
+      grade = "C";   // Assignment
+    end;
+    
+    writeln('Score: ' + score);
+    writeln('Grade: ' + grade);
   end;
 end;
 ```

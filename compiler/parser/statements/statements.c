@@ -64,6 +64,27 @@ bool parse_statement(parser_context_t *context)
         return true;
     }
     
+    // Check for IF statement
+    if (context->lexer->token == TOK_IF) {
+        if (debug_mode) {
+            printf("Found IF statement\n");
+        }
+        // For now, just skip IF statements in the simple parser
+        // The AST-based parser will handle them properly
+        while (context->lexer->token != TOK_END && context->lexer->token != TOK_EOF) {
+            if (!advance_token(context)) {
+                return false;
+            }
+        }
+        // Skip the END token
+        if (context->lexer->token == TOK_END) {
+            if (!advance_token(context)) {
+                return false;
+            }
+        }
+        return true;
+    }
+    
     // Check for writeln statement
     if (context->lexer->token == TOK_WRITELN) {
         return parse_writeln_statement(context);
@@ -108,7 +129,7 @@ bool parse_statement(parser_context_t *context)
     while (context->lexer->token != TOK_SEMICOL && context->lexer->token != TOK_EOF) {
         if (!advance_token(context)) {
             return false;
-        }
+    }
     }
     
     if (context->lexer->token == TOK_SEMICOL) {
@@ -147,6 +168,13 @@ ast_node_t* parse_statement_ast(parser_context_t *context)
             }
             // Parse WHILE loop statement
             return parse_while_statement(context);
+            
+        case TOK_IF:
+            if (debug_mode) {
+                printf("*** IF CASE REACHED! ***\n");
+            }
+            // Parse IF statement
+            return parse_if_statement(context);
             
         case TOK_WRITELN:
             // Parse the writeln statement and build proper AST structure
@@ -190,7 +218,7 @@ ast_node_t* parse_statement_ast(parser_context_t *context)
             
             // Advance to next token to check if it's an assignment
             if (advance_token(context)) {
-                if (context->lexer->token == TOK_EQUAL) {
+                if (context->lexer->token == TOK_ASSIGN) {
                     if (debug_mode) {
                         printf("Found identifier with =, parsing assignment AST for variable: %s\n", var_name);
                     }
@@ -247,7 +275,7 @@ ast_node_t* parse_statement_ast(parser_context_t *context)
             }
             // Skip unknown tokens
             if (!advance_token(context)) {
-                return NULL;
+            return NULL;
             }
             return NULL; // No AST node for skipped tokens
     }
@@ -324,13 +352,13 @@ ast_node_t* parse_assignment_statement_with_var(parser_context_t *context, const
     // Create identifier node for the variable
     ast_node_t *var_node = ast_create_node(AST_IDENTIFIER);
     if (!var_node) {
-        return NULL;
-    }
+            return NULL;
+        }
     
     ast_set_value(var_node, strdup(var_name));
     
     // Consume the = token
-    if (!expect_token(context, TOK_EQUAL)) {
+    if (!expect_token(context, TOK_ASSIGN)) {
         ast_destroy_node(var_node);
         return NULL;
     }
@@ -440,8 +468,8 @@ ast_node_t* parse_assignment_statement(parser_context_t *context)
     
     if (debug_mode) {
         printf("Created AST assignment node\n");
-    }
-    
+}
+
     return assign_node;
 }
 
@@ -582,7 +610,7 @@ ast_node_t* parse_for_statement(parser_context_t *context)
     }
     
     // Expect assignment operator (=)
-    if (!expect_token(context, TOK_EQUAL)) {
+    if (!expect_token(context, TOK_ASSIGN)) {
         parser_error(context, "Expected '=' after loop variable");
         ast_destroy_node(for_node);
         ast_destroy_node(var_node);
@@ -756,7 +784,7 @@ ast_node_t* parse_while_statement(parser_context_t *context)
         
         // Skip semicolon after statement
         if (context->lexer->token == TOK_SEMICOL) {
-            if (!advance_token(context)) {
+    if (!advance_token(context)) {
                 ast_destroy_node(while_node);
                 ast_destroy_node(condition_expr);
                 ast_destroy_node(body_node);
@@ -783,4 +811,191 @@ ast_node_t* parse_while_statement(parser_context_t *context)
     }
     
     return while_node;
+}
+
+ast_node_t* parse_if_statement(parser_context_t *context)
+{
+    if (debug_mode) {
+        printf("Parsing IF statement\n");
+    }
+    
+    // Create IF statement AST node
+    ast_node_t *if_node = ast_create_node(AST_IF_STMT);
+    if (!if_node) {
+        parser_error(context, "Failed to create IF statement node");
+        return NULL;
+    }
+    
+    // Consume IF token
+    if (!expect_token(context, TOK_IF)) {
+        ast_destroy_node(if_node);
+        return NULL;
+    }
+    
+    // Parse condition expression
+    ast_node_t *condition_expr = parse_expression(context);
+    if (!condition_expr) {
+        parser_error(context, "Expected condition expression after IF");
+        ast_destroy_node(if_node);
+        return NULL;
+    }
+    
+    // Expect THEN token
+    if (!expect_token(context, TOK_THEN)) {
+        parser_error(context, "Expected 'then' after IF condition");
+        ast_destroy_node(if_node);
+        ast_destroy_node(condition_expr);
+        return NULL;
+    }
+    
+    // Expect BEGIN token for the IF statement block
+    if (!expect_token(context, TOK_BEGIN)) {
+        parser_error(context, "Expected 'begin' for IF statement");
+        ast_destroy_node(if_node);
+        ast_destroy_node(condition_expr);
+        return NULL;
+    }
+    
+    // Create IF body node
+    ast_node_t *if_body_node = ast_create_node(AST_BLOCK);
+    if (!if_body_node) {
+        parser_error(context, "Failed to create IF body node");
+        ast_destroy_node(if_node);
+        ast_destroy_node(condition_expr);
+        return NULL;
+    }
+    
+    // Parse IF body statements until we find ELSEIF, ELSE, or END
+    while (context->lexer->token != TOK_END && 
+           context->lexer->token != TOK_ELSEIF && 
+           context->lexer->token != TOK_ELSE && 
+           context->lexer->token != TOK_EOF) {
+        ast_node_t *stmt = parse_statement_ast(context);
+        if (stmt) {
+            ast_add_child(if_body_node, stmt);
+        }
+        
+        // Skip semicolon after statement
+        if (context->lexer->token == TOK_SEMICOL) {
+            if (!advance_token(context)) {
+                ast_destroy_node(if_node);
+                ast_destroy_node(condition_expr);
+                ast_destroy_node(if_body_node);
+                return NULL;
+            }
+        }
+    }
+    
+    // Add IF condition and body to the IF node
+    ast_add_child(if_node, condition_expr);
+    ast_add_child(if_node, if_body_node);
+    
+    // Handle ELSEIF clauses (inside the same BEGIN...END block)
+    while (context->lexer->token == TOK_ELSEIF) {
+        if (debug_mode) {
+            printf("Parsing ELSEIF clause\n");
+        }
+        
+        // Consume ELSEIF token
+        if (!expect_token(context, TOK_ELSEIF)) {
+            ast_destroy_node(if_node);
+            return NULL;
+        }
+        
+        // Parse ELSEIF condition
+        ast_node_t *elseif_condition = parse_expression(context);
+        if (!elseif_condition) {
+            parser_error(context, "Expected condition expression after ELSEIF");
+            ast_destroy_node(if_node);
+            return NULL;
+        }
+        
+        // Create ELSEIF body node
+        ast_node_t *elseif_body_node = ast_create_node(AST_BLOCK);
+        if (!elseif_body_node) {
+            parser_error(context, "Failed to create ELSEIF body node");
+            ast_destroy_node(if_node);
+            ast_destroy_node(elseif_condition);
+            return NULL;
+        }
+        
+        // Parse ELSEIF body statements until we find another ELSEIF, ELSE, or END
+        while (context->lexer->token != TOK_END && 
+               context->lexer->token != TOK_ELSEIF && 
+               context->lexer->token != TOK_ELSE && 
+               context->lexer->token != TOK_EOF) {
+            ast_node_t *stmt = parse_statement_ast(context);
+            if (stmt) {
+                ast_add_child(elseif_body_node, stmt);
+            }
+            
+            // Skip semicolon after statement
+            if (context->lexer->token == TOK_SEMICOL) {
+                if (!advance_token(context)) {
+                    ast_destroy_node(if_node);
+                    ast_destroy_node(elseif_condition);
+                    ast_destroy_node(elseif_body_node);
+                    return NULL;
+                }
+            }
+        }
+        
+        // Add ELSEIF condition and body to the IF node
+        ast_add_child(if_node, elseif_condition);
+        ast_add_child(if_node, elseif_body_node);
+    }
+    
+    // Handle ELSE clause (inside the same BEGIN...END block)
+    if (context->lexer->token == TOK_ELSE) {
+        if (debug_mode) {
+            printf("Parsing ELSE clause\n");
+        }
+        
+        // Consume ELSE token
+        if (!expect_token(context, TOK_ELSE)) {
+            ast_destroy_node(if_node);
+            return NULL;
+        }
+        
+        // Create ELSE body node
+        ast_node_t *else_body_node = ast_create_node(AST_BLOCK);
+        if (!else_body_node) {
+            parser_error(context, "Failed to create ELSE body node");
+            ast_destroy_node(if_node);
+            return NULL;
+        }
+        
+        // Parse ELSE body statements until we find END
+        while (context->lexer->token != TOK_END && context->lexer->token != TOK_EOF) {
+            ast_node_t *stmt = parse_statement_ast(context);
+            if (stmt) {
+                ast_add_child(else_body_node, stmt);
+            }
+            
+            // Skip semicolon after statement
+            if (context->lexer->token == TOK_SEMICOL) {
+                if (!advance_token(context)) {
+                    ast_destroy_node(if_node);
+                    ast_destroy_node(else_body_node);
+                    return NULL;
+                }
+            }
+        }
+        
+        // Add ELSE body to the IF node
+        ast_add_child(if_node, else_body_node);
+    }
+    
+    // Expect END token
+    if (!expect_token(context, TOK_END)) {
+        parser_error(context, "Expected 'end' after IF statement");
+        ast_destroy_node(if_node);
+        return NULL;
+    }
+    
+    if (debug_mode) {
+        printf("IF statement parsed successfully with %zu children\n", if_node->child_count);
+    }
+    
+    return if_node;
 }

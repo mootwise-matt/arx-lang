@@ -4,7 +4,7 @@
 This document provides a comprehensive overview of the current implementation status of the ARX programming language compiler and virtual machine.
 
 ## 🎉 MAJOR MILESTONE ACHIEVED
-**CORE FUNCTIONALITY COMPLETE!** The ARX programming language toolchain is now fully functional with complete AST-based parsing, dynamic code generation, full VM execution, and **control flow statements (FOR and WHILE loops)**. **All examples are working perfectly!**
+**CORE FUNCTIONALITY COMPLETE!** The ARX programming language toolchain is now fully functional with complete AST-based parsing, dynamic code generation, full VM execution, **control flow statements (IF, FOR, and WHILE loops)**, **comparison operators**, and **string concatenation**. **All examples are working perfectly!**
 
 ### Recent Breakthrough: AST-Based Architecture
 The implementation has been completely rebuilt with a proper Abstract Syntax Tree (AST) architecture that enables:
@@ -15,11 +15,13 @@ The implementation has been completely rebuilt with a proper Abstract Syntax Tre
 - **Type Conversion**: Automatic integer-to-string conversion for string concatenation
 - **Symbol Table Integration**: Complete variable management with proper scoping
 - **Object-Oriented Programming**: Complete support for method calls and field access
-- **Control Flow Statements**: FOR and WHILE loops with proper termination and body execution
+- **Control Flow Statements**: IF, FOR, and WHILE loops with proper termination and body execution
+- **Comparison Operators**: Full support for ==, !=, <, <=, >, >= operators
+- **String Concatenation**: Proper type-aware + operator for string concatenation vs arithmetic addition
 - **Label Resolution**: Two-pass compilation with proper jump address resolution
 
 ### Working Examples
-Both example programs now work perfectly:
+All example programs now work perfectly:
 
 **01_hello_world.arx:**
 ```arx
@@ -41,24 +43,87 @@ module ArithmeticDemo;
 class App
   procedure Main
   begin
-    writeln('=== ARX Arithmetic Demo ===');
-    writeln('Calculation: (2000 * 3) / 4 = ');
+    writeln('=== ARX Arithmetic Operations Demo ===');
     
-    integer result;
-    result = (2000 * 3) / 4;
-    writeln('Result: ' + result);
+    // Basic arithmetic operations
+    integer a, b, c, result;
+    a = 10; b = 5; c = 3;
+    
+    // Addition with string concatenation
+    result = a + b;
+    writeln('Addition: ' + a + ' + ' + b + ' = ' + result);
+    
+    // All arithmetic operations working
+    result = a - b; writeln('Subtraction: ' + a + ' - ' + b + ' = ' + result);
+    result = a * b; writeln('Multiplication: ' + a + ' * ' + b + ' = ' + result);
+    result = a / b; writeln('Division: ' + a + ' / ' + b + ' = ' + result);
+    result = a % c; writeln('Modulo: ' + a + ' % ' + c + ' = ' + result);
+    result = a ^ c; writeln('Exponentiation: ' + a + ' ^ ' + c + ' = ' + result);
     
     writeln('=== Demo Complete ===');
   end;
 end;
 ```
 
+**03_control_statements.arx:**
+```arx
+module ControlStatementsDemo;
+class App
+  procedure Main
+  begin
+    writeln('=== ARX Control Statements Demo ===');
+    
+    // FOR loops
+    writeln('Counting from 1 to 5:');
+    for integer i = 1 to 5 do
+    begin
+      writeln('Loop iteration: ' + i);
+    end;
+    
+    // IF statements with comparison operators
+    integer test_value;
+    test_value = 2;
+    if test_value == 1 then
+    begin
+      writeln('IF condition encountered');
+    elseif test_value == 2 then
+      writeln('ELSEIF condition encountered');
+    else
+      writeln('ELSE condition encountered');
+    end;
+    
+    // WHILE loops
+    integer counter;
+    counter = 1;
+    while counter <= 1 do
+    begin
+      writeln('WHILE loop iteration: ' + counter);
+      counter = counter + 1;
+    end;
+  end;
+end;
+```
+
 **Output:**
 ```
-=== ARX Arithmetic Demo ===
-Calculation: (2000 * 3) / 4 = 
-Result: 1500
+=== ARX Arithmetic Operations Demo ===
+Addition: 10 + 5 = 15
+Subtraction: 10 - 5 = 5
+Multiplication: 10 * 5 = 50
+Division: 10 / 5 = 2
+Modulo: 10 % 3 = 1
+Exponentiation: 10 ^ 3 = 1000
 === Demo Complete ===
+
+=== ARX Control Statements Demo ===
+Counting from 1 to 5:
+Loop iteration: 1
+Loop iteration: 2
+Loop iteration: 3
+Loop iteration: 4
+Loop iteration: 5
+ELSEIF condition encountered
+WHILE loop iteration: 1
 ```
 
 **03_object_oriented.arx:**

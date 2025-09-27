@@ -49,6 +49,28 @@ end;
 - **Field Access**: `obj.field`
 - **Array Access**: `arr[index]`
 
+### Assignment vs Comparison Operators
+ARX uses C-style operators for clarity:
+- **Assignment**: `=` - assigns a value to a variable
+  ```arx
+  integer x;
+  x = 10;        // Assigns 10 to x
+  string name;
+  name = "John"; // Assigns "John" to name
+  ```
+- **Comparison**: `==` - compares two values for equality
+  ```arx
+  if x == 10 then     // Compares x with 10
+  begin
+    writeln("x equals 10");
+  end;
+  
+  if name == "John" then  // Compares name with "John"
+  begin
+    writeln("Hello John!");
+  end;
+  ```
+
 ## I/O Operations
 - **Output**: `WriteLn(expression)` - outputs value and newline
 - **String Literals**: `"Hello, World!"` - string constants

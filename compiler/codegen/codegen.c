@@ -363,6 +363,9 @@ bool generate_statement(codegen_context_t *context, ast_node_t *node)
             return generate_assignment(context, node);
             
         case AST_IF_STMT:
+            if (debug_mode) {
+                printf("*** AST_IF_STMT case reached! ***\n");
+            }
             return generate_if_statement(context, node);
             
         case AST_WHILE_STMT:
@@ -374,6 +377,9 @@ bool generate_statement(codegen_context_t *context, ast_node_t *node)
         default:
             if (debug_mode) {
                 printf("Warning: Unknown statement type %d\n", node->type);
+                if (node->type == 16) {
+                    printf("This is AST_IF_STMT but not being handled!\n");
+                }
             }
             return true;
     }
@@ -714,16 +720,135 @@ bool generate_new_expression(codegen_context_t *context, const char *class_name)
 
 bool generate_if_statement(codegen_context_t *context, ast_node_t *node)
 {
-    if (context == NULL || node == NULL || node->type != AST_IF_STMT) {
+    if (!node || node->type != AST_IF_STMT || node->child_count < 2) {
+        if (debug_mode) {
+            printf("Invalid IF statement node\n");
+        }
         return false;
     }
     
     if (debug_mode) {
-        printf("Generating if statement\n");
+        printf("Generating IF statement with %zu children\n", node->child_count);
     }
     
-    // For now, generate a placeholder if statement
-    emit_instruction(context, VM_JPC, 0, 0);
+    // IF node structure: [condition, if_body, elseif_condition1, elseif_body1, ..., else_body]
+    // At minimum: [condition, if_body]
+    // With ELSEIF: [condition, if_body, elseif_condition, elseif_body, ...]
+    // With ELSE: [condition, if_body, ..., else_body]
+    
+    ast_node_t *condition_expr = node->children[0];    // IF condition
+    ast_node_t *if_body_node = node->children[1];      // IF body
+    
+    // Create labels for IF control flow
+    size_t if_end_label = create_label(context);
+    size_t next_clause_label = create_label(context);
+    
+    if (debug_mode) {
+        printf("IF statement labels: end=%zu, next_clause=%zu\n", if_end_label, next_clause_label);
+    }
+    
+    // Generate IF condition
+    generate_expression_ast(context, condition_expr);
+    
+    // Jump to next clause (ELSEIF or ELSE) if condition is false
+    emit_jump_if_false(context, next_clause_label);
+    if (debug_mode) {
+        printf("Emitted jump_if_false to next clause label %zu at instruction %zu\n", next_clause_label, context->instruction_count);
+    }
+    
+    // Generate IF body
+    if (if_body_node && if_body_node->type == AST_BLOCK) {
+        for (size_t i = 0; i < if_body_node->child_count; i++) {
+            generate_ast_code(context, if_body_node->children[i]);
+        }
+    }
+    
+    // Jump to end after IF body (skip ELSEIF and ELSE)
+    emit_jump(context, if_end_label);
+    if (debug_mode) {
+        printf("Emitted jump to end label %zu at instruction %zu\n", if_end_label, context->instruction_count);
+    }
+    
+    // Handle ELSEIF clauses
+    size_t child_index = 2;  // Start after condition and if_body
+    while (child_index + 1 < node->child_count) {
+        // Check if this is an ELSEIF (has condition and body)
+        if (child_index + 1 < node->child_count) {
+            ast_node_t *elseif_condition = node->children[child_index];
+            ast_node_t *elseif_body = node->children[child_index + 1];
+            
+            // Set next clause label (this is where we jump when IF condition is false)
+            set_label(context, next_clause_label, context->instruction_count);
+            if (debug_mode) {
+                printf("Set next clause label %zu at instruction %zu\n", next_clause_label, context->instruction_count);
+            }
+            
+            // Generate ELSEIF condition
+            generate_expression_ast(context, elseif_condition);
+            
+            // Create next label for this ELSEIF (either next ELSEIF or ELSE or end)
+            size_t current_next_label = (child_index + 2 < node->child_count) ? create_label(context) : if_end_label;
+            
+            // Jump to next label if ELSEIF condition is false
+            emit_jump_if_false(context, current_next_label);
+            if (debug_mode) {
+                printf("Emitted jump_if_false to label %zu at instruction %zu\n", current_next_label, context->instruction_count);
+            }
+            
+            // Generate ELSEIF body
+            if (elseif_body && elseif_body->type == AST_BLOCK) {
+                for (size_t i = 0; i < elseif_body->child_count; i++) {
+                    generate_ast_code(context, elseif_body->children[i]);
+                }
+            }
+            
+            // Jump to end after ELSEIF body
+            emit_jump(context, if_end_label);
+            if (debug_mode) {
+                printf("Emitted jump to end label %zu at instruction %zu\n", if_end_label, context->instruction_count);
+            }
+            
+            // Move to next ELSEIF or ELSE
+            child_index += 2;
+            next_clause_label = current_next_label;
+        } else {
+            break;
+        }
+    }
+    
+    // Handle ELSE clause (if present)
+    if (child_index < node->child_count) {
+        ast_node_t *else_body = node->children[child_index];
+        
+        // Set next clause label (this is where we jump when all conditions are false)
+        set_label(context, next_clause_label, context->instruction_count);
+        if (debug_mode) {
+            printf("Set ELSE label %zu at instruction %zu\n", next_clause_label, context->instruction_count);
+        }
+        
+        // Generate ELSE body
+        if (else_body && else_body->type == AST_BLOCK) {
+            for (size_t i = 0; i < else_body->child_count; i++) {
+                generate_ast_code(context, else_body->children[i]);
+            }
+        }
+    } else {
+        // No ELSE clause, set the final next clause label (this becomes the end)
+        set_label(context, next_clause_label, context->instruction_count);
+        if (debug_mode) {
+            printf("Set final next clause label %zu at instruction %zu\n", next_clause_label, context->instruction_count);
+        }
+    }
+    
+    // Set IF end label
+    set_label(context, if_end_label, context->instruction_count);
+    if (debug_mode) {
+        printf("Set IF end label %zu at instruction %zu\n", if_end_label, context->instruction_count);
+    }
+    
+    if (debug_mode) {
+        printf("IF statement code generation complete\n");
+    }
     
     return true;
 }
@@ -856,7 +981,15 @@ void generate_ast_code(codegen_context_t *context, ast_node_t *node)
     if (!node) return;
     
     if (debug_mode) {
-        printf("Generating code for AST node type: %d\n", node->type);
+        printf("Generating code for AST node type: %d", node->type);
+        if (node->type == AST_IF_STMT) {
+            printf(" (AST_IF_STMT=%d)", AST_IF_STMT);
+        } else if (node->type == AST_WHILE_STMT) {
+            printf(" (AST_WHILE_STMT=%d)", AST_WHILE_STMT);
+        } else if (node->type == AST_FOR_STMT) {
+            printf(" (AST_FOR_STMT=%d)", AST_FOR_STMT);
+        }
+        printf("\n");
     }
     
     switch (node->type) {
@@ -902,6 +1035,10 @@ void generate_ast_code(codegen_context_t *context, ast_node_t *node)
             
         case AST_WHILE_STMT:
             generate_while_statement(context, node);
+            break;
+            
+        case AST_IF_STMT:
+            generate_if_statement(context, node);
             break;
             
         case AST_EXPR_STMT:
@@ -1037,14 +1174,6 @@ void generate_literal_ast(codegen_context_t *context, ast_node_t *node)
 {
     if (!node) return;
     
-    if (debug_mode) {
-        printf("Generating literal: ");
-        if (node->value) {
-            printf("string '%s'\n", node->value);
-        } else {
-            printf("number %lld\n", node->number);
-        }
-    }
     
     if (node->value) {
         // String literal - find the correct string index in the string table
@@ -1075,16 +1204,10 @@ void generate_identifier_ast(codegen_context_t *context, ast_node_t *node)
 {
     if (!node || !node->value) return;
     
-    if (debug_mode) {
-        printf("Generating identifier: %s\n", node->value);
-    }
     
     // Load variable value from memory
     size_t var_address;
     if (codegen_find_variable(context, node->value, &var_address)) {
-        if (debug_mode) {
-            printf("Loading variable '%s' from address %zu\n", node->value, var_address);
-        }
         emit_instruction(context, VM_LOD, 0, var_address);
     } else {
         if (debug_mode) {
@@ -1101,6 +1224,7 @@ void generate_binary_op_ast(codegen_context_t *context, ast_node_t *node)
         printf("Generating binary operation: %s\n", node->value);
     }
     
+    
     // Generate code for left operand
     generate_expression_ast(context, node->children[0]);
     
@@ -1110,19 +1234,40 @@ void generate_binary_op_ast(codegen_context_t *context, ast_node_t *node)
     // Generate the operation
     if (strcmp(node->value, "+") == 0) {
         // Check if this is string concatenation or arithmetic addition
-        // For now, we'll assume it's string concatenation if we're in a writeln context
-        // In a full implementation, we would check the operand types
+        // We need to determine the context and operand types
         
-        // Check if the right operand is an identifier (variable) that might be an integer
-        // If so, we need to convert it to string before concatenation
-        if (node->children[1] && node->children[1]->type == AST_IDENTIFIER) {
-            if (debug_mode) {
-                printf("Converting integer variable to string for concatenation\n");
-            }
-            emit_instruction(context, VM_OPR, 0, OPR_INT_TO_STR);
+        bool is_string_concatenation = false;
+        
+        // Check if left operand is a string literal
+        if (node->children[0] && node->children[0]->type == AST_LITERAL && node->children[0]->value) {
+            // Left operand is a string literal, so this is string concatenation
+            is_string_concatenation = true;
         }
         
-        emit_instruction(context, VM_OPR, 0, OPR_STR_CONCAT);
+        // Also check if the right operand is an identifier (variable) that needs to be converted to string
+        if (node->children[1] && node->children[1]->type == AST_IDENTIFIER) {
+            is_string_concatenation = true;
+        }
+        
+        // If this is part of a complex string concatenation chain, treat as string concatenation
+        // This handles cases like: 'Addition: ' + a + ' + ' + b + ' = ' + result
+        if (node->children[0] && node->children[0]->type == AST_BINARY_OP && 
+            node->children[0]->value && strcmp(node->children[0]->value, "+") == 0) {
+            // Left operand is also a + operation, likely string concatenation
+            is_string_concatenation = true;
+        }
+        
+        if (is_string_concatenation) {
+            // String concatenation
+            // Check if the right operand is an identifier (variable) that might be an integer
+            if (node->children[1] && node->children[1]->type == AST_IDENTIFIER) {
+                emit_instruction(context, VM_OPR, 0, OPR_INT_TO_STR);
+            }
+            emit_instruction(context, VM_OPR, 0, OPR_STR_CONCAT);
+        } else {
+            // Arithmetic addition
+            emit_instruction(context, VM_OPR, 0, OPR_ADD);
+        }
     } else if (strcmp(node->value, "-") == 0) {
         emit_instruction(context, VM_OPR, 0, OPR_SUB);
     } else if (strcmp(node->value, "*") == 0) {
@@ -1133,6 +1278,18 @@ void generate_binary_op_ast(codegen_context_t *context, ast_node_t *node)
         emit_instruction(context, VM_OPR, 0, OPR_POW);
     } else if (strcmp(node->value, "%") == 0) {
         emit_instruction(context, VM_OPR, 0, OPR_MOD);
+    } else if (strcmp(node->value, "==") == 0) {
+        emit_instruction(context, VM_OPR, 0, OPR_EQ);
+    } else if (strcmp(node->value, "!=") == 0) {
+        emit_instruction(context, VM_OPR, 0, OPR_NEQ);
+    } else if (strcmp(node->value, "<") == 0) {
+        emit_instruction(context, VM_OPR, 0, OPR_LESS);
+    } else if (strcmp(node->value, "<=") == 0) {
+        emit_instruction(context, VM_OPR, 0, OPR_LEQ);
+    } else if (strcmp(node->value, ">") == 0) {
+        emit_instruction(context, VM_OPR, 0, OPR_GREATER);
+    } else if (strcmp(node->value, ">=") == 0) {
+        emit_instruction(context, VM_OPR, 0, OPR_GEQ);
     } else {
         if (debug_mode) {
             printf("Warning: Unknown binary operator: %s\n", node->value);
@@ -1397,7 +1554,7 @@ void generate_field_access_ast(codegen_context_t *context, ast_node_t *node)
 bool generate_for_statement(codegen_context_t *context, ast_node_t *node)
 {
     if (!node || node->child_count < 4) {
-        if (debug_mode) {
+    if (debug_mode) {
             printf("Invalid FOR statement node\n");
         }
         return false;

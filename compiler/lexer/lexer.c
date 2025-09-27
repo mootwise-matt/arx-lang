@@ -32,6 +32,7 @@ static const keyword_entry_t keywords[] = {
     {"then", TOK_THEN},
     {"odd", TOK_ODD},
     {"else", TOK_ELSE},
+    {"elseif", TOK_ELSEIF},
     {"shr", TOK_SHR},
     {"shl", TOK_SHL},
     {"sar", TOK_SAR},
@@ -281,11 +282,11 @@ bool lexer_next(lexer_context_t *context)
             
         case '=':
             if (context->pos + 1 < context->src_len && context->src[context->pos + 1] == '=') {
-                context->token = TOK_EQUAL;
+                context->token = TOK_EQUAL;  // == operator
                 context->pos += 2;
                 context->toklen = 2;
             } else {
-                context->token = TOK_EQUAL;
+                context->token = TOK_ASSIGN;  // = assignment
                 context->pos++;
                 context->toklen = 1;
             }
@@ -315,19 +316,13 @@ bool lexer_next(lexer_context_t *context)
             }
             break;
             
-        case '?':
-            context->token = TOK_QUESTION;
-            context->pos++;
-            context->toklen = 1;
-            break;
-            
         case '<':
             if (context->pos + 1 < context->src_len && context->src[context->pos + 1] == '=') {
-                context->token = TOK_LEQ;
+                context->token = TOK_LEQ;  // <= operator
                 context->pos += 2;
                 context->toklen = 2;
             } else {
-                context->token = TOK_LESS;
+                context->token = TOK_LESS;  // < operator
                 context->pos++;
                 context->toklen = 1;
             }
@@ -335,14 +330,20 @@ bool lexer_next(lexer_context_t *context)
             
         case '>':
             if (context->pos + 1 < context->src_len && context->src[context->pos + 1] == '=') {
-                context->token = TOK_GEQ;
+                context->token = TOK_GEQ;  // >= operator
                 context->pos += 2;
                 context->toklen = 2;
             } else {
-                context->token = TOK_GREATER;
+                context->token = TOK_GREATER;  // > operator
                 context->pos++;
                 context->toklen = 1;
             }
+            break;
+            
+        case '?':
+            context->token = TOK_QUESTION;
+            context->pos++;
+            context->toklen = 1;
             break;
             
         case '/':
