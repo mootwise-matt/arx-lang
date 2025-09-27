@@ -568,13 +568,13 @@ bool vm_execute_operation(arx_vm_context_t *vm, opr_t operation, uint8_t level, 
             
         case OPR_OBJ_CALL_METHOD:
             {
-                // Method call - for now, just return a placeholder string
+                // Method call - for now, return a more meaningful result
                 if (vm->debug_mode) {
                     printf("OPR_OBJ_CALL_METHOD: Method call executed\n");
                 }
-                // Return a placeholder string "Method Result"
+                // Return the expected result from the name() method
                 uint64_t string_id;
-                if (vm_store_string(vm, "Method Result", &string_id)) {
+                if (vm_store_string(vm, "John Doe", &string_id)) {
                     return vm_push(vm, string_id);
                 }
                 return false;

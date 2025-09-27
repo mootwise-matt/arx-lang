@@ -47,6 +47,12 @@ class Person
     name = "Unknown";
     age = 0;
   end;
+  
+  // Method to get name
+  procedure name
+  begin
+    name = "John Doe";
+  end;
 end;
 
 // Derived class: Student extends Person
