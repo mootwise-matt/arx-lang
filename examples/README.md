@@ -38,15 +38,14 @@ This directory contains comprehensive examples that demonstrate the ARX programm
 ```
 
 ### 3. Control Statements (`03_control_statements.arx`)
-**Demonstrates**: Comparison operators, logical operators, expressions for control flow
+**Demonstrates**: IF statements, FOR loops, WHILE loops, comparison operators
 
 **Features**:
+- IF statements with ELSEIF and ELSE clauses
+- FOR loops with proper termination
+- WHILE loops with condition checking
 - Comparison operators: `==`, `!=`, `<`, `>`, `<=`, `>=`
-- Logical operators: `and`, `or`, `not` (syntax ready)
-- Arithmetic expressions for control flow
-- Notes on planned control flow features
-
-**Note**: IF/WHILE/FOR statements are planned but not yet implemented. This example shows the expressions that will be used in control flow.
+- Complex conditional expressions
 
 **Usage**:
 ```bash
@@ -54,7 +53,23 @@ This directory contains comprehensive examples that demonstrate the ARX programm
 ./arxvm examples/03_control_statements.arxmod
 ```
 
-### 4. Object-Oriented Features (`04_oo_features.arx`)
+### 4. Logical Operators (`05_logical_operators.arx`)
+**Demonstrates**: Logical operators for complex boolean expressions
+
+**Features**:
+- Logical AND operator: `&&`
+- Logical OR operator: `||`
+- Logical NOT operator: `!`
+- Complex logical expressions with parentheses
+- Boolean evaluation and testing
+
+**Usage**:
+```bash
+./arx examples/05_logical_operators.arx
+./arxvm examples/05_logical_operators.arxmod
+```
+
+### 5. Object-Oriented Features (`04_oo_features.arx`)
 **Demonstrates**: Classes, inheritance, constructors, methods, field access
 
 **Features**:
@@ -89,9 +104,11 @@ This directory contains comprehensive examples that demonstrate the ARX programm
 - **String Operations**: String literals and concatenation
 - **Output**: `writeln` for program output
 - **Expressions**: Complex arithmetic and string expressions
+- **Control Flow**: IF/WHILE/FOR statements with proper execution
+- **Comparison Operators**: `==`, `!=`, `<`, `>`, `<=`, `>=`
+- **Logical Operators**: `&&` (AND), `||` (OR), `!` (NOT)
 
 ### 🔄 Planned Features (Not Yet Implemented)
-- **Control Flow**: IF/WHILE/FOR statements
 - **Boolean Literals**: `true` and `false` keywords
 - **Method Parameters**: Parameters in method declarations and calls
 - **Array Operations**: Array creation, indexing, and manipulation

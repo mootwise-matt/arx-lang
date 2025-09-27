@@ -421,6 +421,36 @@ bool vm_execute_operation(arx_vm_context_t *vm, opr_t operation, uint8_t level, 
                 return false;
             }
             
+        case OPR_AND:
+            {
+                uint64_t b, a;
+                if (vm_pop(vm, &b) && vm_pop(vm, &a)) {
+                    // Logical AND: both operands must be non-zero
+                    return vm_push(vm, (a != 0 && b != 0) ? 1 : 0);
+                }
+                return false;
+            }
+            
+        case OPR_OR:
+            {
+                uint64_t b, a;
+                if (vm_pop(vm, &b) && vm_pop(vm, &a)) {
+                    // Logical OR: at least one operand must be non-zero
+                    return vm_push(vm, (a != 0 || b != 0) ? 1 : 0);
+                }
+                return false;
+            }
+            
+        case OPR_NOT:
+            {
+                uint64_t a;
+                if (vm_pop(vm, &a)) {
+                    // Logical NOT: 0 becomes 1, non-zero becomes 0
+                    return vm_push(vm, (a == 0) ? 1 : 0);
+                }
+                return false;
+            }
+            
         case OPR_WRITELN:
             // WriteLn - output newline (no stack operation needed)
             printf("\n");

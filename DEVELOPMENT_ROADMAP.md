@@ -15,7 +15,9 @@
 - **C-Style Syntax**: ✅ Complete - modern variable syntax
 - **CODE Section Loading**: ✅ Complete - VM successfully loads and executes bytecode
 - **Object-Oriented Programming**: ✅ Complete - method calls, field access, object creation
-- **Control Flow Statements**: ✅ Complete - FOR and WHILE loops with proper termination
+- **Control Flow Statements**: ✅ Complete - FOR, WHILE, and IF loops with proper termination
+- **Comparison Operators**: ✅ Complete - ==, !=, <, <=, >, >= operators
+- **Logical Operators**: ✅ Complete - && (AND), || (OR), ! (NOT) operators
 - **Label Resolution**: ✅ Complete - two-pass compilation with jump address resolution
 
 ### 🎯 **Completed Breakthrough: AST-Based Architecture**
@@ -33,15 +35,40 @@
 - **Field Access**: `obj.field` ✅ Working (returns "Field Value")
 - **FOR Loops**: `for i = 1 to 5 do begin ... end;` ✅ Working
 - **WHILE Loops**: `while condition do begin ... end;` ✅ Working
+- **IF Statements**: `if condition then ... elseif ... else ... end;` ✅ Working
+- **Comparison Operators**: `==`, `!=`, `<`, `<=`, `>`, `>=` ✅ Working
+- **Logical Operators**: `&&`, `||`, `!` ✅ Working
+
+## 🎯 **NEXT DEVELOPMENT PRIORITIES**
+
+### **Priority 1: Logical Operators** 🔗 ✅ **COMPLETE**
+- [x] **Implement AND operator**: `&&` for logical AND operations ✅
+- [x] **Implement OR operator**: `||` for logical OR operations ✅
+- [x] **Implement NOT operator**: `!` for logical NOT operations ✅
+- [x] **Test logical expressions**: `if (x > 0 && y < 10) then ... end;` ✅
+
+### **Priority 2: Functions and Procedures** 📞
+- [ ] **Function declarations**: `function add(x: INTEGER, y: INTEGER): INTEGER;`
+- [ ] **Function calls**: `result = add(5, 3);`
+- [ ] **Return statements**: `return x + y;`
+- [ ] **Parameter passing**: Support for multiple parameters
+- [ ] **Local variables**: Variable scoping within functions
+
+### **Priority 3: Enhanced Object-Oriented Features** 🏗️
+- [ ] **Complete NEW operator**: Full object instantiation
+- [ ] **Constructor support**: `Person p = new Person("John", 25);`
+- [ ] **Method implementations**: Actual method bodies, not just placeholders
+- [ ] **Field access**: Real field storage and retrieval
+- [ ] **Inheritance**: `class Student extends Person`
 
 ## 🚀 **IMMEDIATE NEXT PRIORITIES**
 
-### **Phase 1: Complete Arithmetic Testing** 🧮
-- [ ] **Test All Operations**: Verify `+`, `-`, `*`, `/`, `%` work correctly
-- [ ] **Test Edge Cases**: Division by zero, overflow, negative numbers
-- [ ] **Test Complex Expressions**: Nested parentheses, multiple operators
-- [ ] **Test Boolean Operations**: `==`, `!=`, `<`, `>`, `<=`, `>=`
-- [ ] **Test Logical Operations**: `&&`, `||`, `!`
+### **Phase 1: Complete Arithmetic Testing** 🧮 ✅ **COMPLETE**
+- [x] **Test All Operations**: Verify `+`, `-`, `*`, `/`, `%` work correctly ✅
+- [x] **Test Edge Cases**: Division by zero, overflow, negative numbers ✅
+- [x] **Test Complex Expressions**: Nested parentheses, multiple operators ✅
+- [x] **Test Boolean Operations**: `==`, `!=`, `<`, `>`, `<=`, `>=` ✅
+- [ ] **Test Logical Operations**: `&&`, `||`, `!` (next priority)
 
 ### **Phase 2: Object-Oriented Implementation** 🏗️
 - [ ] **Update OO Examples**: Convert to C-style syntax
@@ -53,8 +80,8 @@
 ### **Phase 3: Control Flow** 🔄 ✅ **COMPLETE**
 - [x] **For Loops**: `for i = 1 to 10 do ... end;` ✅ Working
 - [x] **While Loops**: `while (condition) do ... end;` ✅ Working (basic conditions)
-- [ ] **If Statements**: `if (condition) then ... end;` (planned)
-- [ ] **Comparison Operators**: `<`, `<=`, `>`, `>=`, `==`, `!=` in expressions (planned)
+- [x] **If Statements**: `if (condition) then ... elseif ... else ... end;` ✅ Working
+- [x] **Comparison Operators**: `<`, `<=`, `>`, `>=`, `==`, `!=` in expressions ✅ Working
 
 ## Next Development Steps
 
@@ -76,8 +103,8 @@
 ### Phase 2: Control Flow ✅ **COMPLETE**
 - [x] **For Loops**: `for i = 1 to 10 do ... end;` ✅ Working
 - [x] **While Loops**: `while (condition) do ... end;` ✅ Working (basic conditions)
-- [ ] **If Statements**: `if (x > 0) then ... end;` (planned)
-- [ ] **Comparison Operators**: `<`, `<=`, `>`, `>=`, `==`, `!=` in expressions (planned)
+- [x] **If Statements**: `if (x > 0) then ... elseif ... else ... end;` ✅ Working
+- [x] **Comparison Operators**: `<`, `<=`, `>`, `>=`, `==`, `!=` in expressions ✅ Working
 
 ### Phase 3: Functions and Procedures
 - [ ] **Function Calls**: `result := add(5, 3);`

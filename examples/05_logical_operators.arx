@@ -1,0 +1,91 @@
+module LogicalOperators;
+
+class App
+  procedure Main
+  begin
+    writeln('=== ARX Logical Operators Demo ===');
+    writeln('');
+    
+    // Test variables
+    integer a;
+    integer b;
+    integer c;
+    integer result;
+    
+    a = 5;
+    b = 10;
+    c = 0;
+    
+    writeln('Variables: a = ' + a + ', b = ' + b + ', c = ' + c);
+    writeln('');
+    
+    // Test Logical AND (&&)
+    writeln('=== Logical AND (&&) Tests ===');
+    
+    result = a > 0 && b > 0;
+    writeln('a > 0 && b > 0 = ' + result + ' (should be 1)');
+    
+    result = a > 0 && c > 0;
+    writeln('a > 0 && c > 0 = ' + result + ' (should be 0)');
+    
+    result = a > 10 && b > 5;
+    writeln('a > 10 && b > 5 = ' + result + ' (should be 0)');
+    
+    result = a == 5 && b == 10;
+    writeln('a == 5 && b == 10 = ' + result + ' (should be 1)');
+    
+    writeln('');
+    
+    // Test Logical OR (||)
+    writeln('=== Logical OR (||) Tests ===');
+    
+    result = a > 0 || c > 0;
+    writeln('a > 0 || c > 0 = ' + result + ' (should be 1)');
+    
+    result = a > 10 || b > 5;
+    writeln('a > 10 || b > 5 = ' + result + ' (should be 1)');
+    
+    result = a > 10 || c > 0;
+    writeln('a > 10 || c > 0 = ' + result + ' (should be 0)');
+    
+    result = a == 5 || b == 5;
+    writeln('a == 5 || b == 5 = ' + result + ' (should be 1)');
+    
+    writeln('');
+    
+    // Test Logical NOT (!)
+    writeln('=== Logical NOT (!) Tests ===');
+    
+    result = !(a > 0);
+    writeln('!(a > 0) = ' + result + ' (should be 0)');
+    
+    result = !(c > 0);
+    writeln('!(c > 0) = ' + result + ' (should be 1)');
+    
+    result = !(a > 10);
+    writeln('!(a > 10) = ' + result + ' (should be 1)');
+    
+    result = !(a == 5);
+    writeln('!(a == 5) = ' + result + ' (should be 0)');
+    
+    writeln('');
+    
+    // Test Complex Logical Expressions
+    writeln('=== Complex Logical Expressions ===');
+    
+    result = (a > 0 && b > 0) || (c > 0);
+    writeln('(a > 0 && b > 0) || (c > 0) = ' + result + ' (should be 1)');
+    
+    result = (a > 10) || (b > 5 && c > 0);
+    writeln('(a > 10) || (b > 5 && c > 0) = ' + result + ' (should be 1)');
+    
+    result = !(a > 0 && b > 0);
+    writeln('!(a > 0 && b > 0) = ' + result + ' (should be 0)');
+    
+    result = !(a > 10) && !(c > 0);
+    writeln('!(a > 10) && !(c > 0) = ' + result + ' (should be 1)');
+    
+    writeln('');
+    writeln('=== Logical Operators Demo Complete ===');
+  end;
+end;

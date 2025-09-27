@@ -17,6 +17,7 @@ The implementation has been completely rebuilt with a proper Abstract Syntax Tre
 - **Object-Oriented Programming**: Complete support for method calls and field access
 - **Control Flow Statements**: IF, FOR, and WHILE loops with proper termination and body execution
 - **Comparison Operators**: Full support for ==, !=, <, <=, >, >= operators
+- **Logical Operators**: Complete support for && (AND), || (OR), ! (NOT) operators
 - **String Concatenation**: Proper type-aware + operator for string concatenation vs arithmetic addition
 - **Label Resolution**: Two-pass compilation with proper jump address resolution
 
@@ -461,6 +462,45 @@ The AST is now correctly built with the actual values from the source code. The 
 Following the updated compiler architecture principles:
 - **No Hard coding of values** - Hard coding of values is not allowed, all values are calculated at runtime in the VM, all values come from the AST
 - **No limit on strings** - Strings known at compile time can be indefinite in number and the Arxmod file format allows for this, and are stored in the strings section of the Arxmod file
+
+## 🎉 **LATEST ACHIEVEMENT: LOGICAL OPERATORS COMPLETE!**
+
+**Logical operators (`&&`, `||`, `!`) are now fully implemented and working!**
+
+### Logical Operators Implementation
+- **Lexer**: Added support for `&&`, `||`, and `!` tokens
+- **Parser**: Implemented proper precedence parsing for logical expressions
+- **Code Generator**: Added bytecode generation for `OPR_AND`, `OPR_OR`, `OPR_NOT`
+- **VM**: Implemented logical operations with proper boolean evaluation
+- **Testing**: Comprehensive test suite with all logical operator combinations
+
+### Example: 05_logical_operators.arx
+```arx
+module LogicalOperators;
+class App
+  procedure Main
+  begin
+    integer a, b, c, result;
+    a = 5; b = 10; c = 0;
+    
+    // Logical AND
+    result = a > 0 && b > 0;  // Returns 1 (true)
+    result = a > 0 && c > 0;  // Returns 0 (false)
+    
+    // Logical OR  
+    result = a > 0 || c > 0;  // Returns 1 (true)
+    result = a > 10 || c > 0; // Returns 0 (false)
+    
+    // Logical NOT
+    result = !(a > 0);        // Returns 0 (false)
+    result = !(c > 0);        // Returns 1 (true)
+    
+    // Complex expressions
+    result = (a > 0 && b > 0) || (c > 0);  // Returns 1 (true)
+    result = !(a > 10) && !(c > 0);        // Returns 1 (true)
+  end;
+end;
+```
 
 The main remaining work is in implementing **AST-based code generation** that uses the parsed AST nodes instead of hardcoded patterns, and completing the code generation for complex expressions and statements.
 

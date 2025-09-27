@@ -24,9 +24,75 @@ ast_node_t* parse_expression(parser_context_t *context)
 ast_node_t* parse_logical_or(parser_context_t *context)
 {
     // Parse logical OR expressions (||)
-    // For now, just parse equality expressions
-    // TODO: Implement full logical operator precedence
-    return parse_equality_ast(context);
+    ast_node_t *left = parse_logical_and_ast(context);
+    if (!left) {
+        return NULL;
+    }
+    
+    while (context->lexer->token == TOK_OR) {
+        if (!advance_token(context)) {
+            ast_destroy_node(left);
+            return NULL;
+        }
+        
+        ast_node_t *right = parse_logical_and_ast(context);
+        if (!right) {
+            ast_destroy_node(left);
+            return NULL;
+        }
+        
+        // Create binary operation node
+        ast_node_t *op_node = ast_create_node(AST_BINARY_OP);
+        if (!op_node) {
+            ast_destroy_node(left);
+            ast_destroy_node(right);
+            return NULL;
+        }
+        
+        op_node->value = strdup("||");
+        ast_add_child(op_node, left);
+        ast_add_child(op_node, right);
+        left = op_node;
+    }
+    
+    return left;
+}
+
+ast_node_t* parse_logical_and_ast(parser_context_t *context)
+{
+    // Parse logical AND expressions (&&)
+    ast_node_t *left = parse_equality_ast(context);
+    if (!left) {
+        return NULL;
+    }
+    
+    while (context->lexer->token == TOK_AND) {
+        if (!advance_token(context)) {
+            ast_destroy_node(left);
+            return NULL;
+        }
+        
+        ast_node_t *right = parse_equality_ast(context);
+        if (!right) {
+            ast_destroy_node(left);
+            return NULL;
+        }
+        
+        // Create binary operation node
+        ast_node_t *op_node = ast_create_node(AST_BINARY_OP);
+        if (!op_node) {
+            ast_destroy_node(left);
+            ast_destroy_node(right);
+            return NULL;
+        }
+        
+        op_node->value = strdup("&&");
+        ast_add_child(op_node, left);
+        ast_add_child(op_node, right);
+        left = op_node;
+    }
+    
+    return left;
 }
 
 bool parse_logical_and(parser_context_t *context)

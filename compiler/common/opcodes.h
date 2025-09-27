@@ -53,29 +53,32 @@ typedef enum
     OPR_LEQ     = 13,       // less than or equal
     OPR_GREATER = 14,       // greater than
     OPR_GEQ     = 15,       // greater than or equal
-    OPR_SHR     = 16,       // shift right
-    OPR_SHL     = 17,       // shift left
-    OPR_SAR     = 18,       // shift arithmetic right
-    OPR_OUTCHAR = 19,       // output character
-    OPR_OUTINT  = 20,       // output integer
-    OPR_OUTSTRING = 21,     // output string
-    OPR_WRITELN = 22,       // write line
-    OPR_INCHAR  = 23,       // input character
-    OPR_ININT   = 24,       // input integer
+    OPR_AND     = 16,       // logical AND
+    OPR_OR      = 17,       // logical OR
+    OPR_NOT     = 18,       // logical NOT
+    OPR_SHR     = 19,       // shift right
+    OPR_SHL     = 20,       // shift left
+    OPR_SAR     = 21,       // shift arithmetic right
+    OPR_OUTCHAR = 22,       // output character
+    OPR_OUTINT  = 23,       // output integer
+    OPR_OUTSTRING = 24,     // output string
+    OPR_WRITELN = 25,       // write line
+    OPR_INCHAR  = 26,       // input character
+    OPR_ININT   = 27,       // input integer
     
     // String operations
-    OPR_STR_CREATE = 25,    // Create string from literal
-    OPR_STR_SLICE = 26,     // Create string slice
-    OPR_STR_CONCAT = 27,    // Concatenate strings
-    OPR_STR_LEN = 28,       // Get string length
-    OPR_STR_EQ = 29,        // String equality
-    OPR_STR_CMP = 30,       // String comparison
-    OPR_STR_BUILDER_CREATE = 31,  // Create string builder
-    OPR_STR_BUILDER_APPEND = 32,  // Append to builder
-    OPR_STR_BUILDER_TO_STR = 33,  // Convert builder to string
-    OPR_STR_DATA = 34,      // String data marker
-    OPR_INT_TO_STR = 35,    // Convert integer to string
-    OPR_STR_TO_INT = 36,    // Convert string to integer
+    OPR_STR_CREATE = 28,    // Create string from literal
+    OPR_STR_SLICE = 29,     // Create string slice
+    OPR_STR_CONCAT = 30,    // Concatenate strings
+    OPR_STR_LEN = 31,       // Get string length
+    OPR_STR_EQ = 32,        // String equality
+    OPR_STR_CMP = 33,       // String comparison
+    OPR_STR_BUILDER_CREATE = 34,  // Create string builder
+    OPR_STR_BUILDER_APPEND = 35,  // Append to builder
+    OPR_STR_BUILDER_TO_STR = 36,  // Convert builder to string
+    OPR_STR_DATA = 37,      // String data marker
+    OPR_INT_TO_STR = 38,    // Convert integer to string
+    OPR_STR_TO_INT = 39,    // Convert string to integer
     
     // Object system operations
     OPR_OBJ_CREATE = 40,    // Create object instance

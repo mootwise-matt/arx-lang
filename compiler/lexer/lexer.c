@@ -316,6 +316,32 @@ bool lexer_next(lexer_context_t *context)
             }
             break;
             
+        case '&':
+            if (context->pos + 1 < context->src_len && context->src[context->pos + 1] == '&') {
+                context->token = TOK_AND;  // && operator
+                context->pos += 2;
+                context->toklen = 2;
+            } else {
+                // Single & not supported, treat as error
+                context->token = TOK_NONE;
+                context->pos++;
+                context->toklen = 1;
+            }
+            break;
+            
+        case '|':
+            if (context->pos + 1 < context->src_len && context->src[context->pos + 1] == '|') {
+                context->token = TOK_OR;   // || operator
+                context->pos += 2;
+                context->toklen = 2;
+            } else {
+                // Single | not supported, treat as error
+                context->token = TOK_NONE;
+                context->pos++;
+                context->toklen = 1;
+            }
+            break;
+            
         case '<':
             if (context->pos + 1 < context->src_len && context->src[context->pos + 1] == '=') {
                 context->token = TOK_LEQ;  // <= operator
@@ -370,31 +396,6 @@ bool lexer_next(lexer_context_t *context)
             context->toklen = 1;
             break;
             
-        case '&':
-            if (context->pos + 1 < context->src_len && context->src[context->pos + 1] == '&') {
-                context->token = TOK_AND;
-                context->pos += 2;
-                context->toklen = 2;
-            } else {
-                // Single & not supported, treat as error
-                context->token = TOK_NONE;
-                context->pos++;
-                context->toklen = 1;
-            }
-            break;
-            
-        case '|':
-            if (context->pos + 1 < context->src_len && context->src[context->pos + 1] == '|') {
-                context->token = TOK_OR;
-                context->pos += 2;
-                context->toklen = 2;
-            } else {
-                // Single | not supported, treat as error
-                context->token = TOK_NONE;
-                context->pos++;
-                context->toklen = 1;
-            }
-            break;
             
         case '[':
             context->token = TOK_LBRACKET;

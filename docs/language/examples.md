@@ -242,11 +242,11 @@ class App
   begin
     integer x;
     string name;
-    
+
     // Assignment: assigns values to variables
     x = 10;           // Assigns 10 to x
     name = "Alice";   // Assigns "Alice" to name
-    
+
     writeln('x = ' + x);
     writeln('name = ' + name);
   end;
@@ -262,21 +262,21 @@ class App
   begin
     integer x;
     string name;
-    
+
     x = 10;
     name = "Alice";
-    
+
     // Comparison: compares values for equality
     if x == 10 then
     begin
       writeln('x equals 10');
     end;
-    
+
     if name == "Alice" then
     begin
       writeln('Hello Alice!');
     end;
-    
+
     if x == 5 then
     begin
       writeln('This will not print');
@@ -296,10 +296,10 @@ class App
   begin
     integer score;
     string grade;
-    
+
     // Assignment
     score = 85;
-    
+
     // Comparison in IF statement
     if score == 85 then
     begin
@@ -309,9 +309,129 @@ class App
     else
       grade = "C";   // Assignment
     end;
-    
+
     writeln('Score: ' + score);
     writeln('Grade: ' + grade);
+  end;
+end;
+```
+
+## Logical Operators
+
+ARX supports C-style logical operators for complex boolean expressions:
+
+### Logical AND (`&&`)
+```arx
+module LogicalAndDemo;
+
+class App
+  procedure Main
+  begin
+    integer age;
+    integer score;
+    
+    age = 18;
+    score = 85;
+    
+    // Both conditions must be true
+    if age >= 18 && score >= 80 then
+    begin
+      writeln('Eligible for advanced course');
+    end;
+    
+    if age >= 18 && score < 80 then
+    begin
+      writeln('Age requirement met, but score too low');
+    end;
+  end;
+end;
+```
+
+### Logical OR (`||`)
+```arx
+module LogicalOrDemo;
+
+class App
+  procedure Main
+  begin
+    integer temperature;
+    string weather;
+    
+    temperature = 25;
+    weather = "sunny";
+    
+    // At least one condition must be true
+    if temperature > 30 || weather == "sunny" then
+    begin
+      writeln('Good day for outdoor activities');
+    end;
+    
+    if temperature < 10 || weather == "rainy" then
+    begin
+      writeln('Stay indoors today');
+    end;
+  end;
+end;
+```
+
+### Logical NOT (`!`)
+```arx
+module LogicalNotDemo;
+
+class App
+  procedure Main
+  begin
+    integer value;
+    boolean flag;
+    
+    value = 0;
+    flag = false;
+    
+    // Negate boolean values
+    if !(value > 0) then
+    begin
+      writeln('Value is zero or negative');
+    end;
+    
+    if !flag then
+    begin
+      writeln('Flag is false');
+    end;
+  end;
+end;
+```
+
+### Complex Logical Expressions
+```arx
+module ComplexLogicalDemo;
+
+class App
+  procedure Main
+  begin
+    integer age;
+    integer income;
+    boolean hasLicense;
+    
+    age = 25;
+    income = 50000;
+    hasLicense = true;
+    
+    // Complex boolean logic with parentheses
+    if (age >= 18 && income >= 30000) || hasLicense then
+    begin
+      writeln('Eligible for loan');
+    end;
+    
+    if !(age < 18 || income < 20000) then
+    begin
+      writeln('Meets basic requirements');
+    end;
+    
+    // Nested logical operations
+    if age >= 21 && (income >= 40000 || hasLicense) then
+    begin
+      writeln('Premium eligibility');
+    end;
   end;
 end;
 ```

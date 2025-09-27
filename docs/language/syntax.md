@@ -42,12 +42,47 @@ end;
 ## Expressions
 - **Arithmetic**: `+`, `-`, `*`, `/`, `^`, `%`
 - **Comparison**: `==`, `!=`, `<`, `<=`, `>`, `>=`
-- **Logical**: `&&`, `||`, `!`
+- **Logical**: `&&` (AND), `||` (OR), `!` (NOT)
 - **Assignment**: `=` (C-style assignment)
 - **Object Creation**: `NEW ClassName` or `NEW ClassName(params)`
 - **Method Calls**: `obj.method()` or `obj.method(params)`
 - **Field Access**: `obj.field`
 - **Array Access**: `arr[index]`
+
+### Logical Operators
+ARX supports C-style logical operators for boolean expressions:
+
+- **Logical AND (`&&`)**: Returns true if both operands are true
+  ```arx
+  if age >= 18 && score >= 80 then
+  begin
+    writeln('Eligible');
+  end;
+  ```
+
+- **Logical OR (`||`)**: Returns true if at least one operand is true
+  ```arx
+  if temperature > 30 || weather == "sunny" then
+  begin
+    writeln('Good weather');
+  end;
+  ```
+
+- **Logical NOT (`!`)**: Negates a boolean expression
+  ```arx
+  if !(value > 0) then
+  begin
+    writeln('Value is zero or negative');
+  end;
+  ```
+
+- **Complex Expressions**: Use parentheses for precedence
+  ```arx
+  if (age >= 18 && income >= 30000) || hasLicense then
+  begin
+    writeln('Eligible for loan');
+  end;
+  ```
 
 ### Assignment vs Comparison Operators
 ARX uses C-style operators for clarity:

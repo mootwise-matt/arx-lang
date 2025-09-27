@@ -1263,7 +1263,7 @@ void generate_binary_op_ast(codegen_context_t *context, ast_node_t *node)
             if (node->children[1] && node->children[1]->type == AST_IDENTIFIER) {
                 emit_instruction(context, VM_OPR, 0, OPR_INT_TO_STR);
             }
-            emit_instruction(context, VM_OPR, 0, OPR_STR_CONCAT);
+        emit_instruction(context, VM_OPR, 0, OPR_STR_CONCAT);
         } else {
             // Arithmetic addition
             emit_instruction(context, VM_OPR, 0, OPR_ADD);
@@ -1290,6 +1290,10 @@ void generate_binary_op_ast(codegen_context_t *context, ast_node_t *node)
         emit_instruction(context, VM_OPR, 0, OPR_GREATER);
     } else if (strcmp(node->value, ">=") == 0) {
         emit_instruction(context, VM_OPR, 0, OPR_GEQ);
+    } else if (strcmp(node->value, "&&") == 0) {
+        emit_instruction(context, VM_OPR, 0, OPR_AND);
+    } else if (strcmp(node->value, "||") == 0) {
+        emit_instruction(context, VM_OPR, 0, OPR_OR);
     } else {
         if (debug_mode) {
             printf("Warning: Unknown binary operator: %s\n", node->value);
@@ -1312,10 +1316,7 @@ void generate_unary_op_ast(codegen_context_t *context, ast_node_t *node)
     if (strcmp(node->value, "-") == 0) {
         emit_instruction(context, VM_OPR, 0, OPR_NEG);
     } else if (strcmp(node->value, "!") == 0) {
-        // TODO: Implement logical NOT operation
-        if (debug_mode) {
-            printf("Warning: Logical NOT operation not yet implemented\n");
-        }
+        emit_instruction(context, VM_OPR, 0, OPR_NOT);
     } else {
         if (debug_mode) {
             printf("Warning: Unknown unary operator: %s\n", node->value);
