@@ -9,7 +9,7 @@ module HelloWorld;
 class App
   procedure Main
   begin
-    WriteLn('Hello, World!');
+    writeln('Hello, World!');
   end;
 end;
 ```
@@ -21,8 +21,8 @@ module StringConcat;
 class App
   procedure Main
   begin
-    WriteLn('Hello' + 'World');
-    WriteLn('ARX' + ' ' + 'Language');
+    writeln('Hello' + 'World');
+    writeln('ARX' + ' ' + 'Language');
   end;
 end;
 ```
@@ -76,7 +76,7 @@ class App
   begin
     calc := new Calculator;
     result := calc.add(5, 3);
-    WriteLn('Result: ', result);
+    writeln('Result: ', result);
   end;
 end;
 
@@ -100,8 +100,8 @@ class App
     person := new Person;
     person.setName('John');
     person.setAge(30);
-    WriteLn('Name: ', person.getName());
-    WriteLn('Age: ', person.getAge());
+    writeln('Name: ', person.getName());
+    writeln('Age: ', person.getAge());
   end;
 end;
 
@@ -163,12 +163,12 @@ class Animal
   
   procedure makeSound
   begin
-    WriteLn('Some sound');
+    writeln('Some sound');
   end;
   
   procedure eat
   begin
-    WriteLn('Eating');
+    writeln('Eating');
   end;
 end;
 
@@ -183,7 +183,7 @@ class Dog extends Animal
   
   procedure makeSound
   begin
-    WriteLn('Woof!');
+    writeln('Woof!');
   end;
 end;
 ```
@@ -201,8 +201,8 @@ class App
     // Constructor with parameters
     person2 := new Person('Alice', 25);
     
-    WriteLn('Person 1: ', person1.getName());
-    WriteLn('Person 2: ', person2.getName());
+    writeln('Person 1: ', person1.getName());
+    writeln('Person 2: ', person2.getName());
   end;
 end;
 
@@ -453,10 +453,10 @@ class App
     product := a * b;
     quotient := a / b;
     
-    WriteLn('Sum: ', sum);
-    WriteLn('Difference: ', diff);
-    WriteLn('Product: ', product);
-    WriteLn('Quotient: ', quotient);
+    writeln('Sum: ', sum);
+    writeln('Difference: ', diff);
+    writeln('Product: ', product);
+    writeln('Quotient: ', quotient);
   end;
 end;
 ```
@@ -473,12 +473,12 @@ class App
     
     if (x > y) then
     begin
-      WriteLn('x is greater than y');
+      writeln('x is greater than y');
     end;
     
     if (x == 10 && y == 5) then
     begin
-      WriteLn('Both conditions are true');
+      writeln('Both conditions are true');
     end;
   end;
 end;
@@ -496,8 +496,8 @@ class App
     result1 := calculator.add(10, 20);
     result2 := calculator.multiply(5, 6);
     
-    WriteLn('Addition result: ', result1);
-    WriteLn('Multiplication result: ', result2);
+    writeln('Addition result: ', result1);
+    writeln('Multiplication result: ', result2);
   end;
 end;
 
@@ -525,13 +525,13 @@ class App
   begin
     account := new BankAccount(1000);
     
-    WriteLn('Initial balance: ', account.getBalance());
+    writeln('Initial balance: ', account.getBalance());
     
     account.deposit(500);
-    WriteLn('After deposit: ', account.getBalance());
+    writeln('After deposit: ', account.getBalance());
     
     account.withdraw(200);
-    WriteLn('After withdrawal: ', account.getBalance());
+    writeln('After withdrawal: ', account.getBalance());
   end;
 end;
 
@@ -556,7 +556,7 @@ class BankAccount
     end
     else
     begin
-      WriteLn('Insufficient funds');
+      writeln('Insufficient funds');
     end;
   end;
   
@@ -577,8 +577,8 @@ class App
     circle := new Circle(5);
     rectangle := new Rectangle(4, 6);
     
-    WriteLn('Circle area: ', circle.getArea());
-    WriteLn('Rectangle area: ', rectangle.getArea());
+    writeln('Circle area: ', circle.getArea());
+    writeln('Rectangle area: ', rectangle.getArea());
   end;
 end;
 

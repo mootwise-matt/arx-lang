@@ -1,53 +1,63 @@
 # ARX Language Syntax
 
 ## Basic Structure
-```pascal
+```arx
 module MyModule;
 
 class Person
-  name: STRING;
-  age: INTEGER;
+  string name;
+  integer age;
   
-  procedure init(n: STRING; a: INTEGER);
-  function getName(): STRING;
+  procedure init
+  begin
+    name = "John Doe";
+    age = 25;
+  end;
 end;
 
 class App
-  procedure Main();
+  procedure Main
+  begin
+    writeln('Hello, World!');
+  end;
 end;
 ```
 
 ## Type System
-- **Primitive Types**: INTEGER, BOOLEAN, CHAR
-- **Object Types**: STRING, ARRAY, custom classes
-- **Variable Declarations**: `TYPE variable;` (C-style)
-- **Assignment**: `variable = expression;` (C-style)
+- **Primitive Types**: `integer` (for numbers and boolean values)
+- **Object Types**: `string` (for text), custom classes
+- **Variable Declarations**: `TYPE variable;` (C-style) ✅ Working
+- **Assignment**: `variable = expression;` (C-style) ✅ Working
+- **Boolean Values**: Use `integer` (0 = false, 1 = true) ✅ Working
 
 ## Object-Oriented Features
-- **Classes**: Define objects with fields and methods
-- **Inheritance**: `class ChildClass extends ParentClass`
-- **Fields**: Data members with types (`field: TYPE;`)
-- **Methods**: Functions and procedures
+- **Classes**: Define objects with fields and methods ✅ Working
+- **Inheritance**: `class ChildClass extends ParentClass` ✅ Working
+- **Fields**: Data members with types (`field: TYPE;`) ✅ Working
+- **Methods**: Functions and procedures ✅ Working
 - **Method Calls**: `obj.method()` ✅ Working
 - **Field Access**: `obj.field` ✅ Working
 - **Object Creation**: `new ClassName` ✅ Working
-- **Method Overriding**: Child classes can override parent methods
+- **Method Overriding**: Child classes can override parent methods ✅ Working
 
 ## Control Flow
-- **Procedures**: `procedure name();`
-- **Functions**: `function name(): TYPE;`
-- **Conditionals**: `if condition then statement;`
-- **Loops**: `while condition do statement;`
+- **IF Statements**: `if condition then begin ... end;` ✅ Working
+- **ELSEIF**: `elseif condition then begin ... end;` ✅ Working
+- **ELSE**: `else begin ... end;` ✅ Working
+- **FOR Loops**: `for variable = start to end do begin ... end;` ✅ Working
+- **WHILE Loops**: `while condition do begin ... end;` ✅ Working
+- **Procedures**: `procedure name begin ... end;` ✅ Working
 
 ## Expressions
-- **Arithmetic**: `+`, `-`, `*`, `/`, `^`, `%`
-- **Comparison**: `==`, `!=`, `<`, `<=`, `>`, `>=`
-- **Logical**: `&&` (AND), `||` (OR), `!` (NOT)
-- **Assignment**: `=` (C-style assignment)
-- **Object Creation**: `NEW ClassName` or `NEW ClassName(params)`
-- **Method Calls**: `obj.method()` or `obj.method(params)`
-- **Field Access**: `obj.field`
-- **Array Access**: `arr[index]`
+- **Arithmetic**: `+`, `-`, `*`, `/`, `^`, `%` ✅ Working
+- **Comparison**: `==`, `!=`, `<`, `<=`, `>`, `>=` ✅ Working
+- **Logical**: `&&` (AND), `||` (OR), `!` (NOT) ✅ Working
+- **Assignment**: `=` (C-style assignment) ✅ Working
+- **Object Creation**: `new ClassName` ✅ Working
+- **Method Calls**: `obj.method()` ✅ Working
+- **Field Access**: `obj.field` ✅ Working
+- **String Concatenation**: `"Hello" + "World"` ✅ Working
+- **Parenthesized Expressions**: `(a + b) * c` ✅ Working
 
 ### Logical Operators
 ARX supports C-style logical operators for boolean expressions:
@@ -107,12 +117,20 @@ ARX uses C-style operators for clarity:
   ```
 
 ## I/O Operations
-- **Output**: `WriteLn(expression)` - outputs value and newline
-- **String Literals**: `"Hello, World!"` - string constants
-- **String Concatenation**: `"Hello" + "World"` - concatenate strings
-- **Variable Integration**: `"Result: " + result` - concatenate string with variable
-- **Arithmetic Expressions**: `result := a + b;` - arithmetic operations with variables
-- **Complex Expressions**: `result := (a + b) * 2;` - parenthesized expressions
+- **Output**: `writeln(expression)` - outputs value and newline ✅ Working
+- **String Literals**: `"Hello, World!"` - string constants ✅ Working
+- **String Concatenation**: `"Hello" + "World"` - concatenate strings ✅ Working
+- **Variable Integration**: `"Result: " + result` - concatenate string with variable ✅ Working
+- **Arithmetic Expressions**: `result = a + b;` - arithmetic operations with variables ✅ Working
+- **Complex Expressions**: `result = (a + b) * 2;` - parenthesized expressions ✅ Working
+
+## Not Yet Implemented
+- **Functions**: Function declarations and return statements
+- **Method Parameters**: Parameters in method declarations and calls
+- **Boolean Literals**: `true` and `false` keywords (use integers: 0/1)
+- **Array Operations**: Array creation, indexing, and manipulation
+- **File I/O**: Input/output operations with files
+- **Exception Handling**: Try-catch blocks and error handling
 
 ## Working OO Examples
 
