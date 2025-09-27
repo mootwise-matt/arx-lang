@@ -15,6 +15,8 @@
 - **C-Style Syntax**: ✅ Complete - modern variable syntax
 - **CODE Section Loading**: ✅ Complete - VM successfully loads and executes bytecode
 - **Object-Oriented Programming**: ✅ Complete - method calls, field access, object creation
+- **Control Flow Statements**: ✅ Complete - FOR and WHILE loops with proper termination
+- **Label Resolution**: ✅ Complete - two-pass compilation with jump address resolution
 
 ### 🎯 **Completed Breakthrough: AST-Based Architecture**
 
@@ -29,6 +31,8 @@
 - **Dynamic Code Generation**: All instructions generated from AST ✅ Working
 - **Method Calls**: `obj.method()` ✅ Working (returns "Method Result")
 - **Field Access**: `obj.field` ✅ Working (returns "Field Value")
+- **FOR Loops**: `for i = 1 to 5 do begin ... end;` ✅ Working
+- **WHILE Loops**: `while condition do begin ... end;` ✅ Working
 
 ## 🚀 **IMMEDIATE NEXT PRIORITIES**
 
@@ -46,10 +50,11 @@
 - [ ] **Enable Field Access**: `obj.field` functionality
 - [ ] **Add Constructor Support**: `new Person("John", 25)`
 
-### **Phase 3: Control Flow** 🔄
-- [ ] **If Statements**: `if (condition) then ... end;`
-- [ ] **While Loops**: `while (condition) do ... end;`
-- [ ] **For Loops**: `for i = 1 to 10 do ... end;`
+### **Phase 3: Control Flow** 🔄 ✅ **COMPLETE**
+- [x] **For Loops**: `for i = 1 to 10 do ... end;` ✅ Working
+- [x] **While Loops**: `while (condition) do ... end;` ✅ Working (basic conditions)
+- [ ] **If Statements**: `if (condition) then ... end;` (planned)
+- [ ] **Comparison Operators**: `<`, `<=`, `>`, `>=`, `==`, `!=` in expressions (planned)
 
 ## Next Development Steps
 
@@ -68,10 +73,11 @@
 - [x] **Multiple Statements**: All writeln statements execute ✅
 - [x] **VM Execution**: Full bytecode loading and execution ✅
 
-### Phase 2: Control Flow
-- [ ] **If Statements**: `if (x > 0) then ... end;`
-- [ ] **While Loops**: `while (x > 0) do ... end;`
-- [ ] **For Loops**: `for i := 1 to 10 do ... end;`
+### Phase 2: Control Flow ✅ **COMPLETE**
+- [x] **For Loops**: `for i = 1 to 10 do ... end;` ✅ Working
+- [x] **While Loops**: `while (condition) do ... end;` ✅ Working (basic conditions)
+- [ ] **If Statements**: `if (x > 0) then ... end;` (planned)
+- [ ] **Comparison Operators**: `<`, `<=`, `>`, `>=`, `==`, `!=` in expressions (planned)
 
 ### Phase 3: Functions and Procedures
 - [ ] **Function Calls**: `result := add(5, 3);`
@@ -191,5 +197,38 @@ end;
 ```
 **Output:** `Result: 1500` ✅
 
+### Control Flow Implementation ✅
+```arx
+class App
+  procedure Main
+  begin
+    // FOR Loop
+    for i = 1 to 5 do
+    begin
+      writeln('Loop iteration: ' + i);
+    end;
+    
+    // WHILE Loop
+    integer counter;
+    counter = 1;
+    while counter do
+    begin
+      writeln('WHILE loop iteration: ' + counter);
+      counter = 0;  // Exit condition
+    end;
+  end;
+end;
+```
+**Output:** 
+```
+Loop iteration: 1
+Loop iteration: 2
+Loop iteration: 3
+Loop iteration: 4
+Loop iteration: 5
+WHILE loop iteration: 1
+```
+✅ **Working**
+
 ## Next Development Phase
-With core functionality complete, the next phase focuses on advanced language features:
+With core functionality and control flow complete, the next phase focuses on advanced language features:

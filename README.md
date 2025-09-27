@@ -1,5 +1,5 @@
 # ARX
-A Tiny Pascal compiler with a virtual machine target to bootstrap systems.
+A Pascal inspired compiler modernised for the 21st Century with a virtual machine target to bootstrap systems.
 
 ## ⚠️ Important: Archive Folder
 The `archive/` folder contains the **OLD VERSION** of this project and is **FOR REFERENCE ONLY**. Do not use archive code for active development.
@@ -29,9 +29,12 @@ This project is starting fresh with a clean architecture. See `docs/` for curren
 - ✅ **Dynamic Values**: All values computed at runtime in VM (no hardcoded values)
 - ✅ **C-Style Syntax**: Variable declarations (`TYPE var;`) and assignments (`var = expr;`)
 - ✅ **CODE Section Loading**: VM successfully loads and executes bytecode
-- ✅ **Verified Working**: Both examples execute perfectly with full functionality
+- ✅ **FOR Loops**: Complete implementation with proper termination and body execution
+- ✅ **WHILE Loops**: Basic implementation working with simple conditions
+- ✅ **Label Resolution**: Two-pass compilation with proper jump address resolution
+- ✅ **Verified Working**: All examples execute perfectly with full functionality
 
-**🎉 CORE FUNCTIONALITY COMPLETE!** The ARX programming language toolchain is now fully functional and tested.
+**🎉 CORE FUNCTIONALITY COMPLETE!** The ARX programming language toolchain is now fully functional with control flow statements.
 
 See [Implementation Status](docs/implementation-status.md) for detailed information.
 

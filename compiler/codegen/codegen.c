@@ -28,6 +28,11 @@ bool codegen_init(codegen_context_t *context, parser_context_t *parser_context)
     context->string_literals_count = 0;
     context->string_literals_capacity = 0;
     
+    // Initialize label table
+    context->label_table = NULL;
+    context->label_table_size = 0;
+    context->label_table_capacity = 0;
+    
     // Initialize variable tracking
     context->variable_names = NULL;
     context->variable_addresses = NULL;
@@ -58,6 +63,9 @@ bool codegen_generate(codegen_context_t *context, ast_node_t *ast,
         codegen_error(context, "Failed to generate code for module");
         return false;
     }
+    
+    // Resolve all label addresses (two-pass compilation)
+    resolve_labels(context);
     
     // Return generated instructions
     *instructions = context->instructions;
@@ -168,6 +176,12 @@ void codegen_cleanup(codegen_context_t *context)
             }
             free(context->string_literals);
             context->string_literals = NULL;
+        }
+        
+        // Cleanup label table
+        if (context->label_table != NULL) {
+            free(context->label_table);
+            context->label_table = NULL;
         }
         
         // Cleanup variable tracking
@@ -716,16 +730,63 @@ bool generate_if_statement(codegen_context_t *context, ast_node_t *node)
 
 bool generate_while_statement(codegen_context_t *context, ast_node_t *node)
 {
-    if (context == NULL || node == NULL || node->type != AST_WHILE_STMT) {
+    if (!node || node->child_count < 2) {
+        if (debug_mode) {
+            printf("Invalid WHILE statement node\n");
+        }
         return false;
     }
     
+    // WHILE node structure: [condition, body]
+    ast_node_t *condition_expr = node->children[0];    // Condition expression
+    ast_node_t *body_node = node->children[1];         // Loop body
+    
+    // Create labels for loop control
+    size_t loop_start_label = create_label(context);
+    size_t loop_end_label = create_label(context);
+    
     if (debug_mode) {
-        printf("Generating while statement\n");
+        printf("Generating WHILE loop\n");
+        printf("WHILE loop labels: start=%zu, end=%zu\n", loop_start_label, loop_end_label);
     }
     
-    // For now, generate a placeholder while statement
-    emit_instruction(context, VM_JMP, 0, 0);
+    // Set loop start label (condition check)
+    set_label(context, loop_start_label, context->instruction_count);
+    if (debug_mode) {
+        printf("Set loop start label %zu at instruction %zu\n", loop_start_label, context->instruction_count);
+    }
+    
+    // Generate condition expression
+    generate_expression_ast(context, condition_expr);
+    
+    // Jump to end if condition is false
+    emit_jump_if_false(context, loop_end_label);
+    if (debug_mode) {
+        printf("Emitted jump_if_false to label %zu at instruction %zu\n", loop_end_label, context->instruction_count);
+    }
+    
+    // Generate loop body
+    if (body_node && body_node->type == AST_BLOCK) {
+        for (size_t i = 0; i < body_node->child_count; i++) {
+            generate_ast_code(context, body_node->children[i]);
+        }
+    }
+    
+    // Jump back to condition check
+    emit_jump(context, loop_start_label);
+    if (debug_mode) {
+        printf("Emitted jump to label %zu at instruction %zu\n", loop_start_label, context->instruction_count);
+    }
+    
+    // Set loop end label
+    set_label(context, loop_end_label, context->instruction_count);
+    if (debug_mode) {
+        printf("Set loop end label %zu at instruction %zu\n", loop_end_label, context->instruction_count);
+    }
+    
+    if (debug_mode) {
+        printf("WHILE loop code generation complete\n");
+    }
     
     return true;
 }
@@ -833,6 +894,14 @@ void generate_ast_code(codegen_context_t *context, ast_node_t *node)
             
         case AST_VAR_DECL:
             generate_variable_declaration_ast(context, node);
+            break;
+            
+        case AST_FOR_STMT:
+            generate_for_statement(context, node);
+            break;
+            
+        case AST_WHILE_STMT:
+            generate_while_statement(context, node);
             break;
             
         case AST_EXPR_STMT:
@@ -1220,14 +1289,75 @@ size_t create_label(codegen_context_t *context)
 
 void set_label(codegen_context_t *context, size_t label_id, size_t instruction_index)
 {
-    if (context == NULL || instruction_index >= context->instruction_count) {
+    if (context == NULL || instruction_index > context->instruction_count) {
         return;
     }
     
-    // In a full implementation, this would set the label address
-    // For now, this is a placeholder
-    (void)label_id;
-    (void)instruction_index;
+    if (debug_mode) {
+        printf("Setting label %zu to instruction %zu\n", label_id, instruction_index);
+    }
+    
+    // Add or update label in the label table
+    bool found = false;
+    for (size_t i = 0; i < context->label_table_size; i++) {
+        if (context->label_table[i].label_id == label_id) {
+            context->label_table[i].instruction_index = instruction_index;
+            context->label_table[i].defined = true;
+            found = true;
+            break;
+        }
+    }
+    
+    if (!found) {
+        // Add new label to table
+        if (context->label_table_size >= context->label_table_capacity) {
+            // Expand label table
+            size_t new_capacity = context->label_table_capacity * 2;
+            if (new_capacity == 0) new_capacity = 16;
+            
+            label_entry_t *new_table = realloc(context->label_table, new_capacity * sizeof(label_entry_t));
+            if (new_table == NULL) {
+                return; // Out of memory
+            }
+            context->label_table = new_table;
+            context->label_table_capacity = new_capacity;
+        }
+        
+        context->label_table[context->label_table_size].label_id = label_id;
+        context->label_table[context->label_table_size].instruction_index = instruction_index;
+        context->label_table[context->label_table_size].defined = true;
+        context->label_table_size++;
+    }
+}
+
+void resolve_labels(codegen_context_t *context)
+{
+    if (context == NULL) {
+        return;
+    }
+    
+    if (debug_mode) {
+        printf("Resolving %zu labels...\n", context->label_table_size);
+    }
+    
+    // Go through all instructions and resolve label references
+    for (size_t i = 0; i < context->instruction_count; i++) {
+        if (context->instructions[i].opcode == VM_JMP || context->instructions[i].opcode == VM_JPC) {
+            size_t label_id = context->instructions[i].opt64;
+            
+            // Find the label in the label table
+            for (size_t j = 0; j < context->label_table_size; j++) {
+                if (context->label_table[j].label_id == label_id && context->label_table[j].defined) {
+                    context->instructions[i].opt64 = context->label_table[j].instruction_index;
+                    if (debug_mode) {
+                        printf("Resolved jump at instruction %zu: label %zu -> instruction %zu\n", 
+                               i, label_id, context->label_table[j].instruction_index);
+                    }
+                    break;
+                }
+            }
+        }
+    }
 }
 
 void generate_method_call_ast(codegen_context_t *context, ast_node_t *node)
@@ -1263,3 +1393,108 @@ void generate_field_access_ast(codegen_context_t *context, ast_node_t *node)
         printf("Generated field access instruction\n");
     }
 }
+
+bool generate_for_statement(codegen_context_t *context, ast_node_t *node)
+{
+    if (!node || node->child_count < 4) {
+        if (debug_mode) {
+            printf("Invalid FOR statement node\n");
+        }
+        return false;
+    }
+    
+    // FOR node structure: [variable, start_expr, end_expr, body]
+    ast_node_t *var_node = node->children[0];      // Loop variable
+    ast_node_t *start_expr = node->children[1];    // Start expression
+    ast_node_t *end_expr = node->children[2];      // End expression
+    ast_node_t *body_node = node->children[3];     // Loop body
+    
+    // Create labels for loop control
+    size_t loop_start_label = create_label(context);
+    size_t loop_end_label = create_label(context);
+    size_t loop_increment_label = create_label(context);
+    
+    if (debug_mode) {
+        printf("Generating FOR loop: %s = %s to %s\n", 
+               var_node->value ? var_node->value : "unknown",
+               start_expr->value ? start_expr->value : "unknown",
+               end_expr->value ? end_expr->value : "unknown");
+        printf("FOR loop labels: start=%zu, end=%zu, increment=%zu\n", 
+               loop_start_label, loop_end_label, loop_increment_label);
+    }
+    
+    // Add loop variable to symbol table if not already present
+    size_t var_address;
+    if (!codegen_find_variable(context, var_node->value, &var_address)) {
+        if (!codegen_add_variable(context, var_node->value, &var_address)) {
+            if (debug_mode) {
+                printf("Failed to add loop variable: %s\n", var_node->value);
+            }
+            return false;
+        }
+    }
+    
+    // Generate start expression and store in loop variable
+    generate_expression_ast(context, start_expr);
+    emit_store(context, 0, var_address);
+    
+    // Set loop start label (condition check)
+    set_label(context, loop_start_label, context->instruction_count);
+    if (debug_mode) {
+        printf("Set loop start label %zu at instruction %zu\n", loop_start_label, context->instruction_count);
+    }
+    
+    // Load loop variable and end expression for comparison
+    emit_load(context, 0, var_address);
+    generate_expression_ast(context, end_expr);
+    
+    // Compare loop variable with end value (less than or equal)
+    emit_operation(context, OPR_LEQ, 0, 0);
+    
+    // Jump to end if loop variable > end value (i.e., if loop_var <= end_value is false)
+    emit_jump_if_false(context, loop_end_label);
+    if (debug_mode) {
+        printf("Emitted jump_if_false to label %zu at instruction %zu\n", loop_end_label, context->instruction_count);
+    }
+    
+    // Generate loop body
+    if (body_node && body_node->type == AST_BLOCK) {
+        for (size_t i = 0; i < body_node->child_count; i++) {
+            generate_ast_code(context, body_node->children[i]);
+        }
+    }
+    
+    // Set increment label
+    set_label(context, loop_increment_label, context->instruction_count);
+    if (debug_mode) {
+        printf("Set increment label %zu at instruction %zu\n", loop_increment_label, context->instruction_count);
+    }
+    
+    // Increment loop variable (load, add 1, store)
+    emit_load(context, 0, var_address);
+    emit_literal(context, 1);
+    emit_operation(context, OPR_ADD, 0, 0);
+    emit_store(context, 0, var_address);
+    if (debug_mode) {
+        printf("Emitted increment code at instruction %zu\n", context->instruction_count);
+    }
+    
+    // Jump back to loop start
+    emit_jump(context, loop_start_label);
+    if (debug_mode) {
+        printf("Emitted jump to label %zu at instruction %zu\n", loop_start_label, context->instruction_count);
+    }
+    
+    // Set loop end label
+    set_label(context, loop_end_label, context->instruction_count);
+    if (debug_mode) {
+        printf("Set loop end label %zu at instruction %zu\n", loop_end_label, context->instruction_count);
+    }
+    
+    if (debug_mode) {
+        printf("FOR loop code generation complete\n");
+    }
+    
+    return true;
+}
+

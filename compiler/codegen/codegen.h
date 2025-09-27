@@ -13,6 +13,13 @@
 // Forward declaration
 typedef struct parser_context parser_context_t;
 
+// Label table entry
+typedef struct {
+    size_t label_id;               // Label identifier
+    size_t instruction_index;      // Instruction index where label is defined
+    bool defined;                  // Whether label has been defined
+} label_entry_t;
+
 // Code generator context
 typedef struct {
     instruction_t *instructions;    // Generated instructions
@@ -24,6 +31,11 @@ typedef struct {
     char **string_literals;        // String literals for ARX module
     size_t string_literals_count;  // Number of string literals
     size_t string_literals_capacity; // Capacity of string literals array
+    
+    // Label table for two-pass compilation
+    label_entry_t *label_table;    // Label table
+    size_t label_table_size;       // Number of labels in table
+    size_t label_table_capacity;   // Capacity of label table
     
     // Variable tracking for Phase 2
     char **variable_names;         // Variable names
@@ -59,6 +71,7 @@ bool generate_field_access(codegen_context_t *context, ast_node_t *node);
 bool generate_new_expression(codegen_context_t *context, const char *class_name);
 bool generate_if_statement(codegen_context_t *context, ast_node_t *node);
 bool generate_while_statement(codegen_context_t *context, ast_node_t *node);
+bool generate_for_statement(codegen_context_t *context, ast_node_t *node);
 bool generate_return_statement(codegen_context_t *context, ast_node_t *node);
 
 // Instruction generation
@@ -92,3 +105,4 @@ void codegen_error(codegen_context_t *context, const char *message);
 void codegen_warning(codegen_context_t *context, const char *message);
 size_t create_label(codegen_context_t *context);
 void set_label(codegen_context_t *context, size_t label_id, size_t instruction_index);
+void resolve_labels(codegen_context_t *context);

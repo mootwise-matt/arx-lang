@@ -46,6 +46,16 @@
 - Object-oriented model for modern development
 - Strong typing for safety
 - Cross-platform compatibility
+- 64bit by default
+- 64bit stack elements
+- 64bit for pointers
+- 64bit for integers
+- 8bit  for booleans
+- 8bit  for chars
+- 64bit for reals
+- 64bit for objects
+- 64bit for arrays
+- UTF-8 for strings
 
 ## Architecture Documentation
 

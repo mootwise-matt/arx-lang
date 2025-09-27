@@ -4,7 +4,7 @@
 This document provides a comprehensive overview of the current implementation status of the ARX programming language compiler and virtual machine.
 
 ## 🎉 MAJOR MILESTONE ACHIEVED
-**CORE FUNCTIONALITY COMPLETE!** The ARX programming language toolchain is now fully functional with complete AST-based parsing, dynamic code generation, and full VM execution. **All examples are working perfectly!**
+**CORE FUNCTIONALITY COMPLETE!** The ARX programming language toolchain is now fully functional with complete AST-based parsing, dynamic code generation, full VM execution, and **control flow statements (FOR and WHILE loops)**. **All examples are working perfectly!**
 
 ### Recent Breakthrough: AST-Based Architecture
 The implementation has been completely rebuilt with a proper Abstract Syntax Tree (AST) architecture that enables:
@@ -15,6 +15,8 @@ The implementation has been completely rebuilt with a proper Abstract Syntax Tre
 - **Type Conversion**: Automatic integer-to-string conversion for string concatenation
 - **Symbol Table Integration**: Complete variable management with proper scoping
 - **Object-Oriented Programming**: Complete support for method calls and field access
+- **Control Flow Statements**: FOR and WHILE loops with proper termination and body execution
+- **Label Resolution**: Two-pass compilation with proper jump address resolution
 
 ### Working Examples
 Both example programs now work perfectly:
@@ -136,7 +138,35 @@ Field Value
 === Demo Complete ===
 ```
 
-**🎉 VERIFIED WORKING:** Both examples execute perfectly with full arithmetic and string operations!
+**🎉 VERIFIED WORKING:** All examples execute perfectly with full arithmetic, string operations, and control flow!
+
+### Control Flow Implementation
+
+**FOR Loops:**
+```arx
+for i = 1 to 5 do
+begin
+  writeln('Loop iteration: ' + i);
+end;
+```
+
+**WHILE Loops:**
+```arx
+integer counter;
+counter = 1;
+while counter do
+begin
+  writeln('WHILE loop iteration: ' + counter);
+  counter = 0;  // Exit condition
+end;
+```
+
+**Features:**
+- ✅ **FOR Loops**: Complete implementation with proper termination and body execution
+- ✅ **WHILE Loops**: Basic implementation working with simple conditions
+- ✅ **Label Resolution**: Two-pass compilation with proper jump address resolution
+- ✅ **Jump Instructions**: VM supports conditional and unconditional jumps
+- ✅ **Loop Body Execution**: All statements in loop bodies execute correctly
 
 ## Compiler Implementation
 
@@ -178,6 +208,9 @@ Field Value
 - **Type Conversion**: Integer to string conversion code generation
 - **Arithmetic Operations**: Code generation for arithmetic expressions with variables
 - **Multiple Variable Support**: Code generation for multiple variable declarations and assignments
+- **FOR Loop Generation**: Complete bytecode generation for FOR loops with proper jump logic
+- **WHILE Loop Generation**: Basic bytecode generation for WHILE loops with condition checking
+- **Label Management**: Two-pass compilation with label table for jump address resolution
 
 #### ARX Module Format (`compiler/arxmod/`)
 - **Header Generation**: ARX module headers with version info
@@ -207,9 +240,9 @@ Field Value
 - **Array Operations**: Array creation and indexing
 
 #### Control Flow
-- **Conditionals**: `if-then-else` statements
-- **Loops**: `while` and `for` loops
-- **Function Calls**: Procedure and function calls
+- **Conditionals**: `if-then-else` statements (planned)
+- **Function Calls**: Procedure and function calls (planned)
+- **Comparison Operators**: Binary comparison operators (`<`, `<=`, `>`, `>=`, `==`, `!=`) in expressions (planned)
 
 ## Virtual Machine Implementation
 
@@ -226,6 +259,8 @@ Field Value
 - **Arithmetic Operations**: Addition (OPR_ADD), subtraction (OPR_SUB), multiplication (OPR_MUL), division (OPR_DIV), exponentiation (OPR_POW), modulo (OPR_MOD)
 - **Expression Evaluation**: Complete arithmetic expression evaluation
 - **Object-Oriented Operations**: Method calls (OPR_OBJ_CALL_METHOD), field access (OPR_OBJ_GET_FIELD), object creation (OPR_OBJ_NEW)
+- **Control Flow Operations**: Conditional jumps (VM_JPC), unconditional jumps (VM_JMP), comparison operations (OPR_LEQ, OPR_GREATER)
+- **Loop Execution**: FOR and WHILE loop execution with proper termination and body execution
 
 #### ARX Module Loader (`vm/loader/`)
 - **Module Loading**: Complete .arxmod file loading

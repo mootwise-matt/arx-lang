@@ -1,13 +1,35 @@
 // ARX Control Statements Example
-// Demonstrates: Comparison operators, logical operators, expressions
-// Note: IF/WHILE/FOR statements are planned but not yet implemented
+// Demonstrates: FOR loops, comparison operators, logical operators
 module ControlStatementsDemo;
 
 class App
   procedure Main
   begin
     writeln('=== ARX Control Statements Demo ===');
-    writeln('Note: Control flow statements (IF/WHILE/FOR) are planned but not yet implemented');
+    writeln('');
+    
+    // FOR Loop demonstration
+    writeln('=== FOR Loop Example ===');
+    writeln('Counting from 1 to 5:');
+    
+    for i = 1 to 5 do
+    begin
+      writeln('Loop iteration: ' + i);
+    end;
+    
+    writeln('');
+    
+    // FOR Loop with arithmetic
+    writeln('=== FOR Loop with Arithmetic ===');
+    writeln('Calculating squares from 1 to 4:');
+    
+    for num = 1 to 4 do
+    begin
+      integer square;
+      square = num * num;
+      writeln('Square of ' + num + ' = ' + square);
+    end;
+    
     writeln('');
     
     // Comparison operators
@@ -18,14 +40,7 @@ class App
     y = 20;
     
     writeln('x = ' + x + ', y = ' + y);
-    
-    // Note: These expressions work but control flow doesn't yet
-    // if (x == y) then writeln('x equals y');
-    // if (x != y) then writeln('x does not equal y');
-    // if (x < y) then writeln('x is less than y');
-    // if (x > y) then writeln('x is greater than y');
-    
-    writeln('Comparison expressions (control flow not yet implemented):');
+    writeln('Comparison expressions:');
     writeln('x == y would be: ' + x + ' == ' + y);
     writeln('x != y would be: ' + x + ' != ' + y);
     writeln('x < y would be: ' + x + ' < ' + y);
@@ -42,7 +57,7 @@ class App
     
     writeln('');
     
-    // Arithmetic expressions that would be used in control flow
+    // Arithmetic expressions for control flow
     writeln('=== Arithmetic for Control Flow ===');
     integer counter;
     counter = 1;
@@ -54,8 +69,26 @@ class App
     counter = counter * 2;
     writeln('Counter after doubling: ' + counter);
     
-    writeln('');
-    writeln('=== Control Statements Demo Complete ===');
-    writeln('Future: IF/WHILE/FOR statements will enable conditional execution and loops');
+  writeln('');
+  
+  // WHILE Loop demonstration
+  writeln('=== WHILE Loop Example ===');
+  writeln('Basic WHILE loop (runs once):');
+  
+  integer while_counter;
+  while_counter = 1;
+  
+  while while_counter do
+  begin
+    writeln('WHILE loop iteration: ' + while_counter);
+    while_counter = 0;  // Exit condition
+  end;
+  
+  writeln('');
+  writeln('=== Control Statements Demo Complete ===');
+  writeln('FOR loops are fully working! Both loop termination and body execution are working correctly.');
+  writeln('WHILE loops are working for basic conditions (variables, literals).');
+  writeln('Note: Comparison operators (<, <=, >, >=) in expressions are planned for future implementation.');
+  writeln('IF statements are planned for future implementation.');
   end;
 end;

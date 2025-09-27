@@ -22,6 +22,48 @@ bool parse_statement(parser_context_t *context)
         printf("Parsing statement - token: %s\n", token_to_string(context->lexer->token));
     }
     
+    // Check for FOR loop statement
+    if (context->lexer->token == TOK_FOR) {
+        if (debug_mode) {
+            printf("Found FOR loop statement\n");
+        }
+        // For now, just skip FOR loops in the simple parser
+        // The AST-based parser will handle them properly
+        while (context->lexer->token != TOK_END && context->lexer->token != TOK_EOF) {
+            if (!advance_token(context)) {
+                return false;
+            }
+        }
+        // Skip the END token
+        if (context->lexer->token == TOK_END) {
+            if (!advance_token(context)) {
+                return false;
+            }
+        }
+        return true;
+    }
+    
+    // Check for WHILE loop statement
+    if (context->lexer->token == TOK_WHILE) {
+        if (debug_mode) {
+            printf("Found WHILE loop statement\n");
+        }
+        // For now, just skip WHILE loops in the simple parser
+        // The AST-based parser will handle them properly
+        while (context->lexer->token != TOK_END && context->lexer->token != TOK_EOF) {
+            if (!advance_token(context)) {
+                return false;
+            }
+        }
+        // Skip the END token
+        if (context->lexer->token == TOK_END) {
+            if (!advance_token(context)) {
+                return false;
+            }
+        }
+        return true;
+    }
+    
     // Check for writeln statement
     if (context->lexer->token == TOK_WRITELN) {
         return parse_writeln_statement(context);
@@ -81,12 +123,31 @@ bool parse_statement(parser_context_t *context)
 ast_node_t* parse_statement_ast(parser_context_t *context)
 {
     if (debug_mode) {
-        printf("Parsing statement AST - token: %s (switch_token=%d, lexer_token=%d, text='%.*s')\n", 
+        printf("*** PARSE_STATEMENT_AST CALLED *** - token: %s (switch_token=%d, lexer_token=%d, text='%.*s')\n", 
                token_to_string(context->lexer->token), context->lexer->token, context->lexer->token, 
                (int)context->lexer->toklen, context->lexer->tokstart);
     }
     
+    if (debug_mode) {
+        printf("DEBUG: Checking token value: %d, TOK_FOR value: %d\n", context->lexer->token, TOK_FOR);
+        printf("DEBUG: About to enter switch statement\n");
+    }
+    
     switch (context->lexer->token) {
+        case TOK_FOR:
+            if (debug_mode) {
+                printf("*** FOR CASE REACHED! ***\n");
+            }
+            // Parse FOR loop statement
+            return parse_for_statement(context);
+            
+        case TOK_WHILE:
+            if (debug_mode) {
+                printf("*** WHILE CASE REACHED! ***\n");
+            }
+            // Parse WHILE loop statement
+            return parse_while_statement(context);
+            
         case TOK_WRITELN:
             // Parse the writeln statement and build proper AST structure
             ast_node_t *expr_node = parse_writeln_statement(context);
@@ -471,4 +532,255 @@ ast_node_t* parse_writeln_statement(parser_context_t *context)
     }
     
     return expr_node;
+}
+
+ast_node_t* parse_for_statement(parser_context_t *context)
+{
+    if (debug_mode) {
+        printf("Parsing FOR loop statement\n");
+    }
+    
+    // Create FOR loop AST node
+    ast_node_t *for_node = ast_create_node(AST_FOR_STMT);
+    if (!for_node) {
+        parser_error(context, "Failed to create FOR loop node");
+        return NULL;
+    }
+    
+    // Consume FOR token
+    if (!expect_token(context, TOK_FOR)) {
+        ast_destroy_node(for_node);
+        return NULL;
+    }
+    
+    // Parse loop variable (identifier)
+    if (!match_token(context, TOK_IDENT)) {
+        parser_error(context, "Expected loop variable identifier after FOR");
+        ast_destroy_node(for_node);
+        return NULL;
+    }
+    
+    // Create identifier node for loop variable
+    ast_node_t *var_node = ast_create_node(AST_IDENTIFIER);
+    if (!var_node) {
+        ast_destroy_node(for_node);
+        return NULL;
+    }
+    
+    // Store the variable name
+    char *var_name = malloc(context->lexer->toklen + 1);
+    if (var_name) {
+        strncpy(var_name, context->lexer->tokstart, context->lexer->toklen);
+        var_name[context->lexer->toklen] = '\0';
+        ast_set_value(var_node, var_name);
+    }
+    
+    if (!advance_token(context)) {
+        ast_destroy_node(for_node);
+        ast_destroy_node(var_node);
+        return NULL;
+    }
+    
+    // Expect assignment operator (=)
+    if (!expect_token(context, TOK_EQUAL)) {
+        parser_error(context, "Expected '=' after loop variable");
+        ast_destroy_node(for_node);
+        ast_destroy_node(var_node);
+        return NULL;
+    }
+    
+    // Parse start expression
+    ast_node_t *start_expr = parse_expression(context);
+    if (!start_expr) {
+        parser_error(context, "Expected start expression in FOR loop");
+        ast_destroy_node(for_node);
+        ast_destroy_node(var_node);
+        return NULL;
+    }
+    
+    // Expect TO token
+    if (!expect_token(context, TOK_TO)) {
+        parser_error(context, "Expected 'to' after start expression");
+        ast_destroy_node(for_node);
+        ast_destroy_node(var_node);
+        ast_destroy_node(start_expr);
+        return NULL;
+    }
+    
+    // Parse end expression
+    ast_node_t *end_expr = parse_expression(context);
+    if (!end_expr) {
+        parser_error(context, "Expected end expression in FOR loop");
+        ast_destroy_node(for_node);
+        ast_destroy_node(var_node);
+        ast_destroy_node(start_expr);
+        return NULL;
+    }
+    
+    // Expect DO token
+    if (!expect_token(context, TOK_DO)) {
+        parser_error(context, "Expected 'do' after end expression");
+        ast_destroy_node(for_node);
+        ast_destroy_node(var_node);
+        ast_destroy_node(start_expr);
+        ast_destroy_node(end_expr);
+        return NULL;
+    }
+    
+    // Parse loop body (statements)
+    ast_node_t *body_node = ast_create_node(AST_BLOCK);
+    if (!body_node) {
+        ast_destroy_node(for_node);
+        ast_destroy_node(var_node);
+        ast_destroy_node(start_expr);
+        ast_destroy_node(end_expr);
+        return NULL;
+    }
+    
+    // Expect BEGIN token for the loop body
+    if (!expect_token(context, TOK_BEGIN)) {
+        parser_error(context, "Expected 'begin' for FOR loop body");
+        ast_destroy_node(for_node);
+        ast_destroy_node(var_node);
+        ast_destroy_node(start_expr);
+        ast_destroy_node(end_expr);
+        ast_destroy_node(body_node);
+        return NULL;
+    }
+    
+    // Parse statements until we find END
+    while (context->lexer->token != TOK_END && context->lexer->token != TOK_EOF) {
+        ast_node_t *stmt = parse_statement_ast(context);
+        if (stmt) {
+            ast_add_child(body_node, stmt);
+        }
+        
+        // Skip semicolon after statement
+        if (context->lexer->token == TOK_SEMICOL) {
+            if (!advance_token(context)) {
+                ast_destroy_node(for_node);
+                ast_destroy_node(var_node);
+                ast_destroy_node(start_expr);
+                ast_destroy_node(end_expr);
+                ast_destroy_node(body_node);
+                return NULL;
+            }
+        }
+    }
+    
+    // Expect END token
+    if (!expect_token(context, TOK_END)) {
+        parser_error(context, "Expected 'end' after FOR loop body");
+        ast_destroy_node(for_node);
+        ast_destroy_node(var_node);
+        ast_destroy_node(start_expr);
+        ast_destroy_node(end_expr);
+        ast_destroy_node(body_node);
+        return NULL;
+    }
+    
+    // Add children to FOR node: variable, start_expr, end_expr, body
+    ast_add_child(for_node, var_node);
+    ast_add_child(for_node, start_expr);
+    ast_add_child(for_node, end_expr);
+    ast_add_child(for_node, body_node);
+    
+    if (debug_mode) {
+        printf("FOR loop parsed successfully: %s = %s to %s\n", 
+               var_name ? var_name : "unknown", 
+               start_expr->value ? start_expr->value : "unknown",
+               end_expr->value ? end_expr->value : "unknown");
+    }
+    
+    return for_node;
+}
+
+ast_node_t* parse_while_statement(parser_context_t *context)
+{
+    if (debug_mode) {
+        printf("Parsing WHILE loop statement\n");
+    }
+    
+    // Create WHILE loop AST node
+    ast_node_t *while_node = ast_create_node(AST_WHILE_STMT);
+    if (!while_node) {
+        parser_error(context, "Failed to create WHILE loop node");
+        return NULL;
+    }
+    
+    // Consume WHILE token
+    if (!expect_token(context, TOK_WHILE)) {
+        ast_destroy_node(while_node);
+        return NULL;
+    }
+    
+    // Parse condition expression
+    ast_node_t *condition_expr = parse_expression(context);
+    if (!condition_expr) {
+        parser_error(context, "Expected condition expression after WHILE");
+        ast_destroy_node(while_node);
+        return NULL;
+    }
+    
+    // Expect DO token
+    if (!expect_token(context, TOK_DO)) {
+        parser_error(context, "Expected 'do' after WHILE condition");
+        ast_destroy_node(while_node);
+        ast_destroy_node(condition_expr);
+        return NULL;
+    }
+    
+    // Expect BEGIN token for the loop body
+    if (!expect_token(context, TOK_BEGIN)) {
+        parser_error(context, "Expected 'begin' for WHILE loop body");
+        ast_destroy_node(while_node);
+        ast_destroy_node(condition_expr);
+        return NULL;
+    }
+    
+    // Create body node
+    ast_node_t *body_node = ast_create_node(AST_BLOCK);
+    if (!body_node) {
+        parser_error(context, "Failed to create WHILE loop body node");
+        ast_destroy_node(while_node);
+        ast_destroy_node(condition_expr);
+        return NULL;
+    }
+    
+    // Parse statements until we find END
+    while (context->lexer->token != TOK_END && context->lexer->token != TOK_EOF) {
+        ast_node_t *stmt = parse_statement_ast(context);
+        if (stmt) {
+            ast_add_child(body_node, stmt);
+        }
+        
+        // Skip semicolon after statement
+        if (context->lexer->token == TOK_SEMICOL) {
+            if (!advance_token(context)) {
+                ast_destroy_node(while_node);
+                ast_destroy_node(condition_expr);
+                ast_destroy_node(body_node);
+                return NULL;
+            }
+        }
+    }
+    
+    // Expect END token
+    if (!expect_token(context, TOK_END)) {
+        parser_error(context, "Expected 'end' after WHILE loop body");
+        ast_destroy_node(while_node);
+        ast_destroy_node(condition_expr);
+        ast_destroy_node(body_node);
+        return NULL;
+    }
+    
+    // Add children to WHILE node: condition, body
+    ast_add_child(while_node, condition_expr);
+    ast_add_child(while_node, body_node);
+    
+    if (debug_mode) {
+        printf("WHILE loop parsed successfully\n");
+    }
+    
+    return while_node;
 }

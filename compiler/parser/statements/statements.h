@@ -27,3 +27,7 @@ ast_node_t* parse_assignment_statement(parser_context_t *context);
 
 // Output Statement Functions
 ast_node_t* parse_writeln_statement(parser_context_t *context);
+
+// Control Flow Statement Functions
+ast_node_t* parse_for_statement(parser_context_t *context);
+ast_node_t* parse_while_statement(parser_context_t *context);

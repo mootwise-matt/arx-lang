@@ -358,7 +358,13 @@ ast_node_t* parse_method(parser_context_t *context)
                 }
             } else {
                 // Parse statement and add to method AST
+                if (debug_mode) {
+                    printf("DEBUG: About to call parse_statement_ast with token: %s\n", token_to_string(context->lexer->token));
+                }
                 ast_node_t *stmt_node = parse_statement_ast(context);
+                if (debug_mode) {
+                    printf("DEBUG: parse_statement_ast returned: %p\n", stmt_node);
+                }
                 if (stmt_node) {
                     ast_add_child(method, stmt_node);
                 } else {
@@ -385,10 +391,11 @@ ast_node_t* parse_method(parser_context_t *context)
             if (debug_mode) {
                 printf("Found method body, parsing statements\n");
             }
-            // Parse method body statements
+            // Parse method body statements using AST-based parsing
             while (context->lexer->token != TOK_END && context->lexer->token != TOK_EOF) {
-                if (!parse_statement(context)) {
-                    return NULL;
+                ast_node_t *stmt_node = parse_statement_ast(context);
+                if (stmt_node) {
+                    ast_add_child(method, stmt_node);
                 }
                 
                 // Skip semicolon after statement
