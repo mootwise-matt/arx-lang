@@ -1,0 +1,32 @@
+// ARX Object-Oriented Features Demo
+// Demonstrates: Method calls and field access
+module OOFeaturesDemo;
+
+class App
+  procedure Main
+  begin
+    writeln('=== ARX OO Features Demo ===');
+    
+    // Test method call
+    writeln('Testing method call:');
+    Person person1;
+    person1 = new Person;
+    writeln(person1.getName());
+    
+    // Test field access
+    writeln('Testing field access:');
+    writeln(person1.name);
+    
+    writeln('=== Demo Complete ===');
+  end;
+end;
+
+// Person class with method and field
+class Person
+  string name;
+  
+  procedure getName
+  begin
+    name = "John Doe";
+  end;
+end;

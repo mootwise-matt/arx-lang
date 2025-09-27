@@ -18,7 +18,7 @@ This project is starting fresh with a clean architecture. See `docs/` for curren
 - ✅ **Complete Lexer**: Token recognition for all language constructs
 - ✅ **Full Parser**: Expression parsing, statement parsing, class parsing with AST
 - ✅ **AST-Based Architecture**: Complete Abstract Syntax Tree implementation
-- ✅ **Object-Oriented Features**: Classes, inheritance, method overriding, NEW expressions
+- ✅ **Object-Oriented Features**: Classes, inheritance, method overriding, NEW expressions, method calls, field access
 - ✅ **Code Generation**: Complete bytecode generation for all operations
 - ✅ **ARX Module Format**: Complete .arxmod file format with sections
 - ✅ **Virtual Machine**: Full VM with instruction execution and string operations

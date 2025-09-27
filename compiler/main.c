@@ -227,6 +227,7 @@ void display_bytecode(instruction_t *instructions, size_t instruction_count)
                 case OPR_WRITELN: printf("WRITELN"); break;
                 case OPR_OBJ_NEW: printf("OBJ_NEW"); break;
                 case OPR_OBJ_CALL_METHOD: printf("OBJ_CALL_METHOD"); break;
+                case OPR_OBJ_GET_FIELD: printf("OBJ_GET_FIELD"); break;
                 default:          printf("OPR_%llu", (unsigned long long)operand); break;
             }
             printf(")");

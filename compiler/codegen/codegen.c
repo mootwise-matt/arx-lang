@@ -850,12 +850,16 @@ void generate_ast_code(codegen_context_t *context, ast_node_t *node)
                 // and emit the output instructions
                 if (node->children[0]->type == AST_LITERAL || 
                     node->children[0]->type == AST_IDENTIFIER || 
-                    node->children[0]->type == AST_BINARY_OP) {
+                    node->children[0]->type == AST_BINARY_OP ||
+                    node->children[0]->type == AST_METHOD_CALL ||
+                    node->children[0]->type == AST_FIELD_ACCESS) {
                     if (debug_mode) {
                         const char *type_name = "unknown";
                         if (node->children[0]->type == AST_LITERAL) type_name = "literal";
                         else if (node->children[0]->type == AST_IDENTIFIER) type_name = "identifier";
                         else if (node->children[0]->type == AST_BINARY_OP) type_name = "binary operation";
+                        else if (node->children[0]->type == AST_METHOD_CALL) type_name = "method call";
+                        else if (node->children[0]->type == AST_FIELD_ACCESS) type_name = "field access";
                         printf("Emitting output instructions for %s in expression statement\n", type_name);
                     }
                     emit_instruction(context, VM_OPR, 0, OPR_OUTSTRING);
@@ -942,6 +946,14 @@ void generate_expression_ast(codegen_context_t *context, ast_node_t *node)
             
         case AST_UNARY_OP:
             generate_unary_op_ast(context, node);
+            break;
+            
+        case AST_METHOD_CALL:
+            generate_method_call_ast(context, node);
+            break;
+            
+        case AST_FIELD_ACCESS:
+            generate_field_access_ast(context, node);
             break;
             
         default:
@@ -1216,4 +1228,38 @@ void set_label(codegen_context_t *context, size_t label_id, size_t instruction_i
     // For now, this is a placeholder
     (void)label_id;
     (void)instruction_index;
+}
+
+void generate_method_call_ast(codegen_context_t *context, ast_node_t *node)
+{
+    if (!context || !node) return;
+    
+    if (debug_mode) {
+        printf("Generating method call: %s\n", node->value ? node->value : "unknown");
+    }
+    
+    // For now, generate a placeholder method call
+    // TODO: Implement proper method call generation
+    emit_instruction(context, VM_OPR, 0, OPR_OBJ_CALL_METHOD);
+    
+    if (debug_mode) {
+        printf("Generated method call instruction\n");
+    }
+}
+
+void generate_field_access_ast(codegen_context_t *context, ast_node_t *node)
+{
+    if (!context || !node) return;
+    
+    if (debug_mode) {
+        printf("Generating field access: %s\n", node->value ? node->value : "unknown");
+    }
+    
+    // For now, generate a placeholder field access
+    // TODO: Implement proper field access generation
+    emit_instruction(context, VM_OPR, 0, OPR_OBJ_GET_FIELD);
+    
+    if (debug_mode) {
+        printf("Generated field access instruction\n");
+    }
 }

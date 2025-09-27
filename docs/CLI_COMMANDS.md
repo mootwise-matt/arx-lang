@@ -21,6 +21,7 @@ This document provides all the command-line interface commands for building and 
 - **Symbol Table**: Complete variable management ✅ Working
 - **Complex Expressions**: `(2000 * 3) / 4 = 1500` ✅ Working
 - **Multiple Statements**: All writeln statements execute ✅ Working
+- **Object-Oriented Programming**: Method calls and field access ✅ Working
 
 ## Prerequisites
 Make sure you have built the ARX tools:
@@ -237,6 +238,9 @@ cd /Users/matthewwhite/Code/arx
 
 # Test arithmetic with string output
 ./arx examples/02_arithmetic.arx && ./arxvm examples/02_arithmetic.arxmod
+
+# Test object-oriented features
+./arx examples/04_oo_features.arx && ./arxvm examples/04_oo_features.arxmod
 
 # Inspect
 ./arxmod_info -sections program.arxmod

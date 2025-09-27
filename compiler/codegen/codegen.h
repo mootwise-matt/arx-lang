@@ -84,6 +84,8 @@ void generate_literal_ast(codegen_context_t *context, ast_node_t *node);
 void generate_identifier_ast(codegen_context_t *context, ast_node_t *node);
 void generate_binary_op_ast(codegen_context_t *context, ast_node_t *node);
 void generate_unary_op_ast(codegen_context_t *context, ast_node_t *node);
+void generate_method_call_ast(codegen_context_t *context, ast_node_t *node);
+void generate_field_access_ast(codegen_context_t *context, ast_node_t *node);
 
 // Utility functions
 void codegen_error(codegen_context_t *context, const char *message);

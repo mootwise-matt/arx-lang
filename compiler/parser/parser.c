@@ -1544,15 +1544,27 @@ ast_node_t* parse_identifier(parser_context_t *context)
         return NULL;
     }
     
-    // For now, just return the identifier node
-    // TODO: Handle postfix operations (dot operator, method calls)
+    // Check for postfix operations (dot operator, method calls)
+    if (node && node->value) {
+        char *base_name = malloc(strlen(node->value) + 1);
+        if (base_name) {
+            strcpy(base_name, node->value);
+            ast_node_t *postfix_result = parse_postfix_operations(context, base_name);
+            if (postfix_result) {
+                ast_destroy_node(node);
+                return postfix_result;
+            }
+        }
+    }
+    
+    // No postfix operations, just return the identifier node
     return node;
 }
 
-bool parse_postfix_operations(parser_context_t *context, char *base_name)
+ast_node_t* parse_postfix_operations(parser_context_t *context, char *base_name)
 {
     if (context == NULL || base_name == NULL) {
-        return false;
+        return NULL;
     }
     
     // Check for dot operator
@@ -1567,10 +1579,10 @@ bool parse_postfix_operations(parser_context_t *context, char *base_name)
     
     // No postfix operations, just a simple identifier
     free(base_name);
-    return true;
+    return NULL; // This should be handled by the caller
 }
 
-bool parse_dot_expression(parser_context_t *context, char *base_name)
+ast_node_t* parse_dot_expression(parser_context_t *context, char *base_name)
 {
     if (debug_mode) {
         printf("Parsing dot expression: %s\n", base_name);
@@ -1579,14 +1591,14 @@ bool parse_dot_expression(parser_context_t *context, char *base_name)
     // Consume the dot
     if (!advance_token(context)) {
         free(base_name);
-        return false;
+        return NULL;
     }
     
     // Expect identifier after dot
     if (!match_token(context, TOK_IDENT)) {
         parser_error(context, "Expected identifier after dot");
         free(base_name);
-        return false;
+        return NULL;
     }
     
     // Store the member name
@@ -1599,7 +1611,7 @@ bool parse_dot_expression(parser_context_t *context, char *base_name)
     if (!advance_token(context)) {
         free(base_name);
         free(member_name);
-        return false;
+        return NULL;
     }
     
     // Check if this is a method call (parentheses)
@@ -1611,35 +1623,52 @@ bool parse_dot_expression(parser_context_t *context, char *base_name)
     }
 }
 
-bool parse_method_call_expression(parser_context_t *context, char *base_name, char *member_name)
+ast_node_t* parse_method_call_expression(parser_context_t *context, char *base_name, char *member_name)
 {
     if (debug_mode) {
         printf("Parsing method call: %s.%s()\n", base_name, member_name ? member_name : "unknown");
+    }
+    
+    // Create method call AST node
+    ast_node_t *method_call = ast_create_node(AST_METHOD_CALL);
+    if (!method_call) {
+        free(base_name);
+        if (member_name) free(member_name);
+        return NULL;
+    }
+    
+    // Set the method call info
+    char *call_info = malloc(strlen(base_name) + strlen(member_name ? member_name : "") + 3);
+    if (call_info) {
+        sprintf(call_info, "%s.%s", base_name, member_name ? member_name : "");
+        ast_set_value(method_call, call_info);
+        free(call_info);
     }
     
     // Consume opening parenthesis
     if (!advance_token(context)) {
         free(base_name);
         if (member_name) free(member_name);
-        return false;
+        ast_destroy_node(method_call);
+        return NULL;
     }
     
-    // Parse parameters (for now, just skip them)
+    // Parse parameters
     int param_count = 0;
     while (context->lexer->token != TOK_RPAREN && context->lexer->token != TOK_EOF) {
-        if (!parse_expression(context)) {
-            free(base_name);
-            if (member_name) free(member_name);
-            return false;
+        ast_node_t *param = parse_expression(context);
+        if (param) {
+            ast_add_child(method_call, param);
+            param_count++;
         }
-        param_count++;
         
         // Check for comma separator
         if (context->lexer->token == TOK_COMMA) {
             if (!advance_token(context)) {
                 free(base_name);
                 if (member_name) free(member_name);
-                return false;
+                ast_destroy_node(method_call);
+                return NULL;
             }
         }
     }
@@ -1649,13 +1678,15 @@ bool parse_method_call_expression(parser_context_t *context, char *base_name, ch
         parser_error(context, "Expected closing parenthesis");
         free(base_name);
         if (member_name) free(member_name);
-        return false;
+        ast_destroy_node(method_call);
+        return NULL;
     }
     
     if (!advance_token(context)) {
         free(base_name);
         if (member_name) free(member_name);
-        return false;
+        ast_destroy_node(method_call);
+        return NULL;
     }
     
     if (debug_mode) {
@@ -1665,13 +1696,29 @@ bool parse_method_call_expression(parser_context_t *context, char *base_name, ch
     
     free(base_name);
     if (member_name) free(member_name);
-    return true;
+    return method_call;
 }
 
-bool parse_field_access_expression(parser_context_t *context, char *base_name, char *member_name)
+ast_node_t* parse_field_access_expression(parser_context_t *context, char *base_name, char *member_name)
 {
     if (debug_mode) {
         printf("Parsing field access: %s.%s\n", base_name, member_name);
+    }
+    
+    // Create field access AST node
+    ast_node_t *field_access = ast_create_node(AST_FIELD_ACCESS);
+    if (!field_access) {
+        free(base_name);
+        free(member_name);
+        return NULL;
+    }
+    
+    // Set the field access info
+    char *access_info = malloc(strlen(base_name) + strlen(member_name) + 2);
+    if (access_info) {
+        sprintf(access_info, "%s.%s", base_name, member_name);
+        ast_set_value(field_access, access_info);
+        free(access_info);
     }
     
     if (debug_mode) {
@@ -1680,7 +1727,7 @@ bool parse_field_access_expression(parser_context_t *context, char *base_name, c
     
     free(base_name);
     free(member_name);
-    return true;
+    return field_access;
 }
 
 bool parse_new_expression(parser_context_t *context)

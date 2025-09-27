@@ -566,6 +566,34 @@ bool vm_execute_operation(arx_vm_context_t *vm, opr_t operation, uint8_t level, 
                 return false;
             }
             
+        case OPR_OBJ_CALL_METHOD:
+            {
+                // Method call - for now, just return a placeholder string
+                if (vm->debug_mode) {
+                    printf("OPR_OBJ_CALL_METHOD: Method call executed\n");
+                }
+                // Return a placeholder string "Method Result"
+                uint64_t string_id;
+                if (vm_store_string(vm, "Method Result", &string_id)) {
+                    return vm_push(vm, string_id);
+                }
+                return false;
+            }
+            
+        case OPR_OBJ_GET_FIELD:
+            {
+                // Field access - for now, just return a placeholder string
+                if (vm->debug_mode) {
+                    printf("OPR_OBJ_GET_FIELD: Field access executed\n");
+                }
+                // Return a placeholder string "Field Value"
+                uint64_t string_id;
+                if (vm_store_string(vm, "Field Value", &string_id)) {
+                    return vm_push(vm, string_id);
+                }
+                return false;
+            }
+            
         default:
             if (vm->debug_mode) {
                 printf("Error: Unknown operation %d\n", operation);
