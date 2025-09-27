@@ -1,2 +1,45 @@
-title: ARX Lang
+title: ARX Programming Language
 theme: minima
+description: A Pascal-inspired, object-oriented programming language with a virtual machine target
+author: Matthew White
+email: matthewwhite@example.com
+url: "https://mootwise-matt.github.io"
+baseurl: "/arx-lang"
+
+# GitHub Pages settings
+plugins:
+  - jekyll-feed
+  - jekyll-sitemap
+  - jekyll-seo-tag
+
+# Navigation
+navigation:
+  - title: Home
+    url: /
+  - title: Documentation
+    url: /docs/
+  - title: Examples
+    url: /examples/
+  - title: GitHub
+    url: https://github.com/mootwise-matt/arx-lang
+
+# Build settings
+markdown: kramdown
+highlighter: rouge
+sass:
+  sass_dir: _sass
+  style: compressed
+
+# Exclude files from processing
+exclude:
+  - README.md
+  - LICENSE
+  - archive/
+  - build/
+  - compiler/
+  - vm/
+  - examples/*.arx
+  - examples/*.arxmod
+  - build.sh
+  - Makefile
+  - DEVELOPMENT_ROADMAP.md
