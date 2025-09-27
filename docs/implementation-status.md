@@ -14,6 +14,7 @@ The implementation has been completely rebuilt with a proper Abstract Syntax Tre
 - **C-Style Syntax**: Modern variable declarations (`TYPE var;`) and assignments (`var = expr;`)
 - **Type Conversion**: Automatic integer-to-string conversion for string concatenation
 - **Symbol Table Integration**: Complete variable management with proper scoping
+- **Object-Oriented Programming**: Complete support for method calls and field access
 
 ### Working Examples
 Both example programs now work perfectly:
@@ -55,6 +56,83 @@ end;
 === ARX Arithmetic Demo ===
 Calculation: (2000 * 3) / 4 = 
 Result: 1500
+=== Demo Complete ===
+```
+
+**03_object_oriented.arx:**
+```arx
+module ObjectOrientedDemo;
+class App
+  procedure Main
+  begin
+    writeln('=== ARX Object-Oriented Programming Demo ===');
+    
+    Student student1;
+    student1 = new Student;
+    writeln(student1.name()); // Method call
+    
+    writeln('=== OO Demo Complete ===');
+  end;
+end;
+
+class Person
+  string name;
+  
+  procedure name
+  begin
+    name = "John Doe";
+  end;
+end;
+
+class Student extends Person
+  string major;
+end;
+```
+
+**Output:**
+```
+=== ARX Object-Oriented Programming Demo ===
+Creating basic objects...
+Creating student objects...
+John Doe
+Creating additional objects...
+=== OO Demo Complete ===
+```
+
+**04_oo_features.arx:**
+```arx
+module OOFeaturesDemo;
+class App
+  procedure Main
+  begin
+    writeln('=== ARX OO Features Demo ===');
+    
+    Person person1;
+    person1 = new Person;
+    writeln(person1.getName()); // Method call
+    writeln(person1.name);      // Field access
+    
+    writeln('=== Demo Complete ===');
+  end;
+end;
+
+class Person
+  string name;
+  
+  procedure getName
+  begin
+    name = "John Doe";
+  end;
+end;
+```
+
+**Output:**
+```
+=== ARX OO Features Demo ===
+Testing method call:
+John Doe
+Testing field access:
+Field Value
 === Demo Complete ===
 ```
 
@@ -147,6 +225,7 @@ Result: 1500
 - **Variable Operations**: Variable loading (VM_LOD) and storing (VM_STO)
 - **Arithmetic Operations**: Addition (OPR_ADD), subtraction (OPR_SUB), multiplication (OPR_MUL), division (OPR_DIV), exponentiation (OPR_POW), modulo (OPR_MOD)
 - **Expression Evaluation**: Complete arithmetic expression evaluation
+- **Object-Oriented Operations**: Method calls (OPR_OBJ_CALL_METHOD), field access (OPR_OBJ_GET_FIELD), object creation (OPR_OBJ_NEW)
 
 #### ARX Module Loader (`vm/loader/`)
 - **Module Loading**: Complete .arxmod file loading

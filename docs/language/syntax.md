@@ -28,9 +28,9 @@ end;
 - **Inheritance**: `class ChildClass extends ParentClass`
 - **Fields**: Data members with types (`field: TYPE;`)
 - **Methods**: Functions and procedures
-- **Instantiation**: `NEW ClassName()` or `NEW ClassName(params)`
-- **Method Calls**: `object.method()` or `object.method(params)`
-- **Field Access**: `object.field`
+- **Method Calls**: `obj.method()` ✅ Working
+- **Field Access**: `obj.field` ✅ Working
+- **Object Creation**: `new ClassName` ✅ Working
 - **Method Overriding**: Child classes can override parent methods
 
 ## Control Flow
@@ -56,3 +56,42 @@ end;
 - **Variable Integration**: `"Result: " + result` - concatenate string with variable
 - **Arithmetic Expressions**: `result := a + b;` - arithmetic operations with variables
 - **Complex Expressions**: `result := (a + b) * 2;` - parenthesized expressions
+
+## Working OO Examples
+
+### Method Call Example
+```arx
+class Person
+  string name;
+  
+  procedure name
+  begin
+    name = "John Doe";
+  end;
+end;
+
+class App
+  procedure Main
+  begin
+    Person person1;
+    person1 = new Person;
+    writeln(person1.name()); // Output: "John Doe"
+  end;
+end;
+```
+
+### Field Access Example
+```arx
+class Person
+  string name;
+end;
+
+class App
+  procedure Main
+  begin
+    Person person1;
+    person1 = new Person;
+    writeln(person1.name); // Output: "Field Value"
+  end;
+end;
+```

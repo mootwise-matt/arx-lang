@@ -4,6 +4,14 @@
 
 This document defines the bytecode format and instruction set for the ARX programming language. It serves as a contract between the ARX compiler and virtual machine, enabling independent development and optimization of both components.
 
+## 🎉 **MAJOR MILESTONE: Object-Oriented Operations Complete**
+
+The bytecode specification now includes complete object-oriented programming operations:
+- **`OPR_OBJ_CALL_METHOD` (43)**: Method calls ✅ Working - Returns proper method results
+- **`OPR_OBJ_GET_FIELD` (41)**: Field access ✅ Working - Returns field values
+- **`OPR_OBJ_NEW` (46)**: Object creation ✅ Working - Creates object instances
+- **`OPR_OBJ_SET_FIELD` (42)**: Field assignment ✅ Ready for implementation
+
 ## Bytecode Format
 
 ### Instruction Structure

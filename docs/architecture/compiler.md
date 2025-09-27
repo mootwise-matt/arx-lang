@@ -11,6 +11,7 @@ The compiler now features a complete Abstract Syntax Tree (AST) implementation t
 - **No Hardcoded Values**: Compiler generates code based on actual parsed expressions
 - **Complete Expression Support**: Full arithmetic, string operations, and variable management
 - **C-Style Syntax**: Modern variable declarations and assignments
+- **Object-Oriented Programming**: Complete support for method calls and field access
 
 ## Compiler Phases
 
@@ -60,6 +61,7 @@ The compiler now features a complete Abstract Syntax Tree (AST) implementation t
 - `AST_VAR_DECL`: Variable declaration
 - `AST_ASSIGNMENT`: Assignment statement
 - `AST_METHOD_CALL`: Method call
+- `AST_FIELD_ACCESS`: Field access
 - `AST_LITERAL`: Literal value
 - `AST_IDENTIFIER`: Identifier reference
 
@@ -96,6 +98,8 @@ The compiler now features a complete Abstract Syntax Tree (AST) implementation t
 - `emit_operation()`: Emit operation instruction
 - `generate_method()`: Generate method code
 - `generate_statement()`: Generate statement code
+- `generate_method_call_ast()`: Generate method call code
+- `generate_field_access_ast()`: Generate field access code
 
 **Code Generation Strategy**:
 - **Stack-based**: All operations use stack
