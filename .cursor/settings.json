@@ -1,0 +1,25 @@
+{
+    "cursor.general.enableCodeActions": true,
+    "cursor.general.enableCodeLens": true,
+    "files.exclude": {
+      "archive/**": true
+    },
+    "search.exclude": {
+      "archive/**": true
+    },
+    "files.watcherExclude": {
+      "archive/**": true
+    },
+    "C_Cpp.default.compilerPath": "/usr/bin/clang",
+    "C_Cpp.default.cStandard": "c99",
+    "C_Cpp.default.intelliSenseMode": "macos-clang-arm64",
+    "files.associations": {
+      "*.arx": "pascal",
+      "*.arxmod": "binary"
+    },
+    "search.include": {
+      "docs/**": true
+    },
+    "editor.suggest.showWords": false,
+    "editor.wordBasedSuggestions": "off"
+  }

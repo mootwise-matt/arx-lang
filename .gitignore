@@ -1,0 +1,28 @@
+# Archive folder - for reference only
+archive/
+
+# Build artifacts
+build/
+*.o
+*.dSYM/
+
+# ARX module files (generated)
+*.arxmod
+
+# Test and debug files
+debug_*.c
+test_*.c
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Temporary files
+*.tmp
+*.temp

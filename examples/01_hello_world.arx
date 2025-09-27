@@ -1,0 +1,12 @@
+module HelloWorld;
+
+class App
+  procedure Main
+  begin
+    string str;
+    str = 'Hello World! Cake is awesome :)';
+    
+    writeln(str);
+    writeln('Welcome to ARX programming language!');
+  end;
+end;

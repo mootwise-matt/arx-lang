@@ -1,0 +1,23 @@
+module ArithmeticDemo;
+
+class App
+  procedure Main
+  begin
+    writeln('=== ARX Arithmetic Demo ===');
+    writeln('Calculation: (2000 * 3) / 4 = ');
+    
+    integer result;
+    result = (2000 * 3) / 4;
+    writeln('Result: ' + result);
+
+    writeln('');
+
+    writeln('Calculation: (15 ^ 3) % 4 = ');
+    
+    integer result;
+    result = (15 ^ 3) % 4;
+    writeln('Result: ' + result);
+    
+    writeln('=== Demo Complete ===');
+  end;
+end;

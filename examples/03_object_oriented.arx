@@ -1,0 +1,63 @@
+// ARX Object-Oriented Programming Demo
+// Demonstrates: Classes, Inheritance, Object Creation, Constructors
+module ObjectOrientedDemo;
+
+class App
+  procedure Main
+  begin
+    writeln('=== ARX Object-Oriented Programming Demo ===');
+    
+    // Test basic object creation
+    writeln('Creating basic objects...');
+    Person person1;
+    person1 = new Person;
+    
+    Person person2;
+    person2 = new Person;
+    
+    // Test inheritance
+    writeln('Creating student objects...');
+    Student student1;
+    student1 = new Student;
+    writeln(student1.name());
+    
+    Student student2;
+    student2 = new Student;
+    
+    // Test multiple object creation
+    writeln('Creating additional objects...');
+    Person person3;
+    person3 = new Person;
+    
+    Student student3;
+    student3 = new Student;
+    
+    writeln('=== OO Demo Complete ===');
+  end;
+end;
+
+// Base class: Person
+class Person
+  string name;
+  integer age;
+  
+  // Constructor
+  procedure init
+  begin
+    name = "Unknown";
+    age = 0;
+  end;
+end;
+
+// Derived class: Student extends Person
+class Student extends Person
+  string major;
+  
+  // Constructor
+  procedure init
+  begin
+    name = "Student";
+    age = 18;
+    major = "Undeclared";
+  end;
+end;

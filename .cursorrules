@@ -1,0 +1,51 @@
+# ARX Programming Language - Global Rules
+
+## Project Context
+- **Language**: ARX - Pascal-inspired, object-oriented programming language
+- **Target**: Cross-platform bytecode execution (ARM, Apple Silicon, Intel)
+- **License**: Apache 2.0
+- **Architecture**: Compiler → Bytecode → Virtual Machine
+
+## ⚠️ ARCHIVE FOLDER WARNING
+- **`archive/` folder contains OLD VERSION only**
+- **DO NOT use archive code for active development**
+- **Archive is for REFERENCE ONLY**
+- **Current project starts fresh from root directory**
+
+## Documentation References
+- **Architecture**: See `docs/architecture/` for detailed design
+- **Language Spec**: See `docs/language/` for syntax and grammar
+- **API Reference**: See `docs/api/` for function documentation
+- **Development**: See `docs/development/` for coding standards
+- **Historical Reference**: See `archive/README.md` for old implementation
+
+## Key Design Principles
+- Everything is an object (except primitives)
+- Strong typing with clear primitive/object distinction
+- Memory safety and deterministic behavior
+- Cross-platform portability
+- Modern tooling support
+
+## When providing assistance:
+1. **NEVER suggest using archive code** - Always work with fresh implementation
+2. **Read relevant docs first** - Check `docs/` for current context
+3. **Follow established patterns** - Maintain consistency with current design
+4. **Consider architecture** - Respect current design decisions
+5. **Include proper error handling** - Always validate inputs
+6. **Add appropriate documentation** - Update current docs when needed
+
+## ARX Language Features
+- Classes with fields and methods
+- Primitive types: INTEGER, BOOLEAN, CHAR
+- Object types: STRING, ARRAY, custom classes
+- Method calls: obj.method()
+- Field access: obj.field
+- NEW operator for object creation
+
+## Code Quality Standards
+- Use C99 with modern features
+- Follow snake_case naming convention
+- Include comprehensive error checking
+- Write tests for new features
+- Document public APIs
+- Maintain cross-platform compatibility
