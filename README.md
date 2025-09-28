@@ -49,6 +49,28 @@ ARX implements a subset of the Pascal langauge. For instance, it does not suppor
 
 ## Building ARX
 
+### Quick Build
+```bash
+# Build everything and install binaries to root
+./build.sh
+```
+
+### Manual Build
+```bash
+# Build in build directory
+cd build
+make
+
+# Binaries are automatically installed to root directory
+```
+
+### Important Notes
+- **Always use root binaries** (`./arx`, `./arxvm`) for running examples
+- **Build directory binaries** are intermediate - don't use them directly
+- **After any build**, root binaries are automatically updated
+
+See [Build Process Documentation](docs/development/build-process.md) for detailed information.
+
 ARX can be built on Windows, Linux, and macOS using the unified build system.
 
 ### Quick Start

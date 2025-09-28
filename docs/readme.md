@@ -18,6 +18,7 @@
 - [API Reference](api/) - Function and class documentation
 
 ## Development
+- [Build Process](development/build-process.md) - **Build system and binary management**
 - [Coding Standards](development/coding-standards.md) - Development guidelines
 - [Testing](development/testing.md) - Testing approach and tools
 - [Debugging](development/debugging.md) - Debugging techniques

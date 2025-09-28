@@ -26,13 +26,15 @@ cd build
 echo "Setting up build structure..."
 mkdir -p lexer parser codegen
 
-# Build the compiler
-echo "Building compiler..."
+# Build the compiler and install binaries
+echo "Building compiler and VM..."
 make -f Makefile
 
 echo ""
 echo "=== Build Complete ==="
 echo "Compiler executable: build/arx"
+echo "VM executable: build/arxvm"
+echo "Binaries installed to root directory for easy access"
 echo ""
 
 # Test the compiler
