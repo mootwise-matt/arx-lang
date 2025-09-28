@@ -54,5 +54,6 @@ struct ast_node {
 ast_node_t* ast_create_node(ast_node_type_t type);
 void ast_add_child(ast_node_t *parent, ast_node_t *child);
 void ast_set_value(ast_node_t *node, const char *value);
+void ast_set_value_from_token(ast_node_t *node, const char *token_start, size_t token_length);
 void ast_set_number(ast_node_t *node, uint64_t number);
 void ast_destroy_node(ast_node_t *node);

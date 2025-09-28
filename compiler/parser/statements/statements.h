@@ -32,3 +32,4 @@ ast_node_t* parse_writeln_statement(parser_context_t *context);
 ast_node_t* parse_for_statement(parser_context_t *context);
 ast_node_t* parse_while_statement(parser_context_t *context);
 ast_node_t* parse_if_statement(parser_context_t *context);
+ast_node_t* parse_return_statement(parser_context_t *context);

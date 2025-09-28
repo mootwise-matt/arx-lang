@@ -56,7 +56,9 @@ make
 1. Make code changes
 2. Run `./build.sh` or `cd build && make`
 3. Binaries are automatically installed to root
-4. Test with `./arx` and `./arxvm` from root directory
+4. **ALWAYS test examples**: `./arx examples/01_hello_world.arx && ./arxvm examples/01_hello_world.arxmod`
+5. **Verify multiple examples work** before committing changes
+6. Test with `./arx` and `./arxvm` from root directory
 
 ### 🚨 Common Issues
 
@@ -88,6 +90,25 @@ CFLAGS = -Wall -Wextra -std=c99 -g -O2
 - `-O2`: Optimize for performance
 
 ## Testing Build
+
+### ⚠️ CRITICAL: Always Test After Changes
+**Before committing any changes, ALWAYS verify that ALL examples run correctly:**
+
+```bash
+# Test ALL examples comprehensively
+for example in examples/*.arx; do
+    echo "Testing $example..."
+    ./arx "$example" && ./arxvm "${example%.arx}.arxmod"
+    echo "✅ $example - SUCCESS"
+done
+
+# Or test individual examples
+./arx examples/01_hello_world.arx && ./arxvm examples/01_hello_world.arxmod
+./arx examples/02_arithmetic.arx && ./arxvm examples/02_arithmetic.arxmod
+./arx examples/03_control_statements.arx && ./arxvm examples/03_control_statements.arxmod
+./arx examples/04_oo_features.arx && ./arxvm examples/04_oo_features.arxmod
+./arx examples/05_logical_operators.arx && ./arxvm examples/05_logical_operators.arxmod
+```
 
 ### Verify Installation
 ```bash

@@ -38,6 +38,111 @@ bool arxmod_writer_init(arxmod_writer_t *writer, const char *filename)
     return true;
 }
 
+bool arxmod_writer_set_flags(arxmod_writer_t *writer, uint32_t flags)
+{
+    if (writer == NULL) {
+        return false;
+    }
+    
+    writer->module_flags = flags;
+    
+    if (writer->debug_output) {
+        printf("ARX module writer: Set flags to 0x%08x\n", flags);
+    }
+    
+    return true;
+}
+
+bool arxmod_writer_set_entry_point(arxmod_writer_t *writer, uint64_t entry_point)
+{
+    if (writer == NULL) {
+        return false;
+    }
+    
+    writer->entry_point = entry_point;
+    
+    if (writer->debug_output) {
+        printf("ARX module writer: Set entry point to 0x%llx\n", (unsigned long long)entry_point);
+    }
+    
+    return true;
+}
+
+bool arxmod_writer_update_header(arxmod_writer_t *writer)
+{
+    if (writer == NULL || writer->file == NULL) {
+        return false;
+    }
+    
+    // Seek to the beginning of the file to update the header
+    if (fseek(writer->file, 0, SEEK_SET) != 0) {
+        if (writer->debug_output) {
+            printf("ARX module writer: Failed to seek to beginning of file\n");
+        }
+        return false;
+    }
+    
+    if (writer->debug_output) {
+        long current_pos = ftell(writer->file);
+        printf("ARX module writer: Seeking to position %ld to update header\n", current_pos);
+    }
+    
+    // Verify we're at the beginning
+    long verify_pos = ftell(writer->file);
+    if (verify_pos != 0) {
+        if (writer->debug_output) {
+            printf("ARX module writer: Warning - not at beginning of file, position is %ld\n", verify_pos);
+        }
+    }
+    
+    // Create updated header
+    arxmod_header_t header;
+    memset(&header, 0, sizeof(arxmod_header_t));
+    
+    // Copy magic
+    memcpy(header.magic, ARXMOD_MAGIC, 8);
+    header.version = ARXMOD_VERSION;
+    header.flags = writer->module_flags;
+    header.header_size = ARXMOD_HEADER_SIZE;
+    header.toc_offset = writer->toc_offset;
+    header.toc_size = writer->section_count * sizeof(arxmod_toc_entry_t);
+    header.data_offset = writer->data_offset;
+    header.data_size = writer->current_data_offset;
+    header.app_name_len = 10; // "ARXProgram"
+    header.app_data_size = 0;
+    header.entry_point = writer->entry_point;
+    
+    // Write updated header
+    if (fwrite(&header, sizeof(arxmod_header_t), 1, writer->file) != 1) {
+        if (writer->debug_output) {
+            printf("ARX module writer: Failed to write updated header\n");
+        }
+        return false;
+    }
+    
+    // Verify what was written
+    if (writer->debug_output) {
+        long after_write_pos = ftell(writer->file);
+        printf("ARX module writer: After writing header, file position is %ld\n", after_write_pos);
+    }
+    
+    if (writer->debug_output) {
+        printf("ARX module writer: Updated header with entry point 0x%llx\n", (unsigned long long)writer->entry_point);
+        printf("ARX module writer: Header size: %llu, Entry point: %llu\n", 
+               (unsigned long long)header.header_size, (unsigned long long)header.entry_point);
+    }
+    
+    // Flush the file to ensure changes are written to disk
+    if (fflush(writer->file) != 0) {
+        if (writer->debug_output) {
+            printf("ARX module writer: Failed to flush file after header update\n");
+        }
+        return false;
+    }
+    
+    return true;
+}
+
 bool arxmod_writer_write_header(arxmod_writer_t *writer, const char *app_name, size_t app_name_len)
 {
     if (writer == NULL || writer->file == NULL) {
@@ -48,7 +153,7 @@ bool arxmod_writer_write_header(arxmod_writer_t *writer, const char *app_name, s
     arxmod_header_t header = {0};
     strncpy(header.magic, ARXMOD_MAGIC, 8);
     header.version = ARXMOD_VERSION;
-    header.flags = 0;
+    header.flags = writer->module_flags;
     header.header_size = ARXMOD_HEADER_SIZE;
     header.toc_offset = 0; // Will be set later
     header.toc_size = 0;   // Will be set later
@@ -56,6 +161,7 @@ bool arxmod_writer_write_header(arxmod_writer_t *writer, const char *app_name, s
     header.data_size = 0;   // Will be set later
     header.app_name_len = app_name_len;
     header.app_data_size = 0; // Will be set later
+    header.entry_point = writer->entry_point;
     
     // Write header
     if (fwrite(&header, sizeof(arxmod_header_t), 1, writer->file) != 1) {
@@ -66,7 +172,7 @@ bool arxmod_writer_write_header(arxmod_writer_t *writer, const char *app_name, s
     writer->toc_offset = ARXMOD_HEADER_SIZE;
     
     // Reserve space for TOC (will be written later)
-    size_t toc_size = 8 * sizeof(arxmod_toc_entry_t); // Reserve space for 8 sections
+    size_t toc_size = 6 * sizeof(arxmod_toc_entry_t); // Reserve space for 6 sections (CODE, STRINGS, SYMBOLS, DEBUG, CLASSES, APP)
     uint8_t *toc_placeholder = calloc(1, toc_size);
     if (toc_placeholder == NULL) {
         return false;
@@ -119,7 +225,7 @@ bool arxmod_writer_add_code_section(arxmod_writer_t *writer, instruction_t *inst
     // Write section data
     if (instruction_count > 0) {
         // Ensure we're at the correct position in the file
-        long expected_position = writer->data_offset + writer->current_data_offset;
+        long expected_position = writer->data_offset + toc_entry->offset;
         if (fseek(writer->file, expected_position, SEEK_SET) != 0) {
             return false;
         }
@@ -183,6 +289,12 @@ bool arxmod_writer_add_strings_section(arxmod_writer_t *writer, const char **str
     
     toc_entry->size = total_size;
     
+    // Seek to the correct position in the file
+    long expected_position = writer->data_offset + toc_entry->offset;
+    if (fseek(writer->file, expected_position, SEEK_SET) != 0) {
+        return false;
+    }
+    
     // Write string data
     for (size_t i = 0; i < string_count; i++) {
         if (strings[i] != NULL) {
@@ -229,6 +341,17 @@ bool arxmod_writer_add_symbols_section(arxmod_writer_t *writer, symbol_entry_t *
     toc_entry->size = symbol_count * sizeof(symbol_entry_t);
     toc_entry->flags = 0;
     
+    if (writer->debug_output) {
+        printf("SYMBOLS section: current_data_offset=%zu, offset=%zu, size=%zu\n", 
+               writer->current_data_offset, toc_entry->offset, toc_entry->size);
+    }
+    
+    // Seek to the correct position in the file
+    long expected_position = writer->data_offset + toc_entry->offset;
+    if (fseek(writer->file, expected_position, SEEK_SET) != 0) {
+        return false;
+    }
+    
     // Write symbol data
     if (symbol_count > 0) {
         if (fwrite(symbols, sizeof(symbol_entry_t), symbol_count, writer->file) != symbol_count) {
@@ -272,6 +395,17 @@ bool arxmod_writer_add_debug_section(arxmod_writer_t *writer, debug_entry_t *deb
     toc_entry->size = debug_count * sizeof(debug_entry_t);
     toc_entry->flags = 0;
     
+    if (writer->debug_output) {
+        printf("DEBUG section: current_data_offset=%zu, offset=%zu, size=%zu\n", 
+               writer->current_data_offset, toc_entry->offset, toc_entry->size);
+    }
+    
+    // Seek to the correct position in the file
+    long expected_position = writer->data_offset + toc_entry->offset;
+    if (fseek(writer->file, expected_position, SEEK_SET) != 0) {
+        return false;
+    }
+    
     // Write debug data
     if (debug_count > 0) {
         if (fwrite(debug_info, sizeof(debug_entry_t), debug_count, writer->file) != debug_count) {
@@ -289,6 +423,109 @@ bool arxmod_writer_add_debug_section(arxmod_writer_t *writer, debug_entry_t *deb
     
     return true;
 }
+
+bool arxmod_writer_add_classes_section(arxmod_writer_t *writer, class_entry_t *classes, size_t class_count, method_entry_t *methods, size_t method_count, field_entry_t *fields, size_t field_count)
+{
+    if (writer == NULL || writer->file == NULL) {
+        return false;
+    }
+    
+    // Expand TOC if needed
+    if (writer->section_count >= writer->toc_capacity) {
+        size_t new_capacity = writer->toc_capacity == 0 ? 8 : writer->toc_capacity * 2;
+        arxmod_toc_entry_t *new_toc = realloc(writer->toc_entries, new_capacity * sizeof(arxmod_toc_entry_t));
+        if (new_toc == NULL) {
+            return false;
+        }
+        writer->toc_entries = new_toc;
+        writer->toc_capacity = new_capacity;
+    }
+    
+    // Create TOC entry
+    arxmod_toc_entry_t *toc_entry = &writer->toc_entries[writer->section_count];
+    memset(toc_entry, 0, sizeof(arxmod_toc_entry_t));
+    strncpy(toc_entry->section_name, ARXMOD_SECTION_CLASSES, 16);
+    toc_entry->offset = writer->current_data_offset; // This is the offset within the data section
+    // Size includes classes plus inline methods and fields
+    toc_entry->size = class_count * sizeof(class_entry_t) + method_count * sizeof(method_entry_t) + field_count * sizeof(field_entry_t);
+    toc_entry->flags = 0;
+    
+    if (writer->debug_output) {
+        printf("CLASSES section: current_data_offset=%zu, offset=%zu, size=%zu\n", 
+               writer->current_data_offset, toc_entry->offset, toc_entry->size);
+    }
+    
+    // Seek to the correct position in the file
+    long expected_position = writer->data_offset + toc_entry->offset;
+    if (writer->debug_output) {
+        printf("CLASSES: Seeking to position %ld (data_offset=%zu + offset=%zu)\n", 
+               expected_position, writer->data_offset, toc_entry->offset);
+    }
+    if (fseek(writer->file, expected_position, SEEK_SET) != 0) {
+        if (writer->debug_output) {
+            printf("CLASSES: fseek failed!\n");
+        }
+        return false;
+    }
+    if (writer->debug_output) {
+        long actual_position = ftell(writer->file);
+        printf("CLASSES: Actual position after fseek: %ld\n", actual_position);
+    }
+    
+    // Write class data with inline methods and fields
+    if (class_count > 0) {
+        if (writer->debug_output) {
+            printf("Writing %zu classes to offset %ld:\n", class_count, expected_position);
+            for (size_t i = 0; i < class_count; i++) {
+                printf("  Class %zu: name='%s', id=%llu, fields=%u, methods=%u\n", 
+                       i, classes[i].class_name, (unsigned long long)classes[i].class_id, 
+                       classes[i].field_count, classes[i].method_count);
+            }
+        }
+        
+        // Write classes with inline methods and fields
+        size_t method_index = 0;
+        size_t field_index = 0;
+        
+        for (size_t i = 0; i < class_count; i++) {
+            // Write class entry
+            if (fwrite(&classes[i], sizeof(class_entry_t), 1, writer->file) != 1) {
+                return false;
+            }
+            
+            // Write inline methods for this class
+            for (size_t j = 0; j < classes[i].method_count; j++) {
+                if (method_index < method_count) {
+                    if (fwrite(&methods[method_index], sizeof(method_entry_t), 1, writer->file) != 1) {
+                        return false;
+                    }
+                    method_index++;
+                }
+            }
+            
+            // Write inline fields for this class
+            for (size_t j = 0; j < classes[i].field_count; j++) {
+                if (field_index < field_count) {
+                    if (fwrite(&fields[field_index], sizeof(field_entry_t), 1, writer->file) != 1) {
+                        return false;
+                    }
+                    field_index++;
+                }
+            }
+        }
+    }
+    
+    writer->current_data_offset += toc_entry->size;
+    writer->section_count++;
+    
+    if (writer->debug_output) {
+        printf("Classes section added: %zu classes (%llu bytes)\n", 
+               class_count, (unsigned long long)toc_entry->size);
+    }
+    
+    return true;
+}
+
 
 bool arxmod_writer_add_app_section(arxmod_writer_t *writer, const char *app_name, size_t app_name_len, const uint8_t *app_data, size_t app_data_size)
 {
@@ -314,6 +551,12 @@ bool arxmod_writer_add_app_section(arxmod_writer_t *writer, const char *app_name
     toc_entry->offset = writer->current_data_offset;
     toc_entry->size = app_name_len + app_data_size;
     toc_entry->flags = 0;
+    
+    // Seek to the correct position in the file
+    long expected_position = writer->data_offset + toc_entry->offset;
+    if (fseek(writer->file, expected_position, SEEK_SET) != 0) {
+        return false;
+    }
     
     // Write app name
     if (app_name_len > 0) {
@@ -369,14 +612,21 @@ bool arxmod_writer_finalize(arxmod_writer_t *writer)
     arxmod_header_t header = {0};
     strncpy(header.magic, ARXMOD_MAGIC, 8);
     header.version = ARXMOD_VERSION;
-    header.flags = 0;
+    header.flags = writer->module_flags;
     header.header_size = ARXMOD_HEADER_SIZE;
     header.toc_offset = writer->toc_offset;
     header.toc_size = writer->section_count * sizeof(arxmod_toc_entry_t);
-    header.data_offset = writer->data_offset;
-    header.data_size = writer->current_data_offset - writer->data_offset;
+    header.data_offset = writer->data_offset; // Use the actual data_offset used when writing sections
+    header.data_size = writer->current_data_offset;
+    
+    // Don't update writer->data_offset here - it's already correct from when sections were written
     header.app_name_len = 0; // Would be set from actual app data
     header.app_data_size = 0; // Would be set from actual app data
+    
+    if (writer->debug_output) {
+        printf("ARX module writer: data_offset=%zu, current_data_offset=%zu, data_size=%llu\n",
+               writer->data_offset, writer->current_data_offset, (unsigned long long)header.data_size);
+    }
     
     if (fwrite(&header, sizeof(arxmod_header_t), 1, writer->file) != 1) {
         return false;

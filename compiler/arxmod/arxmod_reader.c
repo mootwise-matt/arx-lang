@@ -44,6 +44,11 @@ bool arxmod_reader_validate(arxmod_reader_t *reader)
         return false;
     }
     
+    if (reader->debug_output) {
+        printf("ARX module reader: Read header, data_size=%llu\n", 
+               (unsigned long long)reader->header.data_size);
+    }
+    
     // Validate magic number
     if (strncmp(reader->header.magic, ARXMOD_MAGIC, 8) != 0) {
         if (reader->debug_output) {
@@ -382,6 +387,165 @@ bool arxmod_reader_load_debug_section(arxmod_reader_t *reader, debug_entry_t **d
     
     return true;
 }
+
+bool arxmod_reader_load_classes_section(arxmod_reader_t *reader, class_entry_t **classes, size_t *class_count, method_entry_t **methods, size_t *method_count, field_entry_t **fields, size_t *field_count)
+{
+    if (reader == NULL || reader->file == NULL || classes == NULL || class_count == NULL) {
+        return false;
+    }
+    
+    arxmod_toc_entry_t *section = arxmod_reader_find_section(reader, ARXMOD_SECTION_CLASSES);
+    if (section == NULL) {
+        *classes = NULL;
+        *class_count = 0;
+        return true; // No classes section is valid
+    }
+    
+    // Seek to section data
+    if (fseek(reader->file, reader->header.data_offset + section->offset, SEEK_SET) != 0) {
+        return false;
+    }
+    
+    if (reader->debug_output) {
+        printf("DEBUG: Loading classes section, size=%llu bytes\n", (unsigned long long)section->size);
+    }
+    
+    // For now, let's use the old approach but fix the class count issue
+    // TODO: Implement proper inline methods and fields storage
+    
+    // First pass: read all class entries to determine counts
+    size_t remaining_size = section->size;
+    *class_count = 0;
+    size_t total_method_count = 0;
+    size_t total_field_count = 0;
+    
+    // Count classes by reading them one by one
+    while (remaining_size >= sizeof(class_entry_t)) {
+        class_entry_t temp_class;
+        if (fread(&temp_class, sizeof(class_entry_t), 1, reader->file) != 1) {
+            break;
+        }
+        
+        (*class_count)++;
+        total_method_count += temp_class.method_count;
+        total_field_count += temp_class.field_count;
+        
+        remaining_size -= sizeof(class_entry_t);
+        
+        // Skip over inline methods and fields for this class
+        size_t methods_size = temp_class.method_count * sizeof(method_entry_t);
+        size_t fields_size = temp_class.field_count * sizeof(field_entry_t);
+        size_t skip_size = methods_size + fields_size;
+        
+        if (skip_size > 0) {
+            if (fseek(reader->file, skip_size, SEEK_CUR) != 0) {
+                break;
+            }
+            remaining_size -= skip_size;
+        }
+        
+        if (reader->debug_output) {
+            printf("DEBUG: Read class %zu: name='%s', id=%llu, fields=%u, methods=%u\n", 
+                   *class_count, temp_class.class_name, (unsigned long long)temp_class.class_id, 
+                   temp_class.field_count, temp_class.method_count);
+        }
+    }
+    
+    if (reader->debug_output) {
+        printf("DEBUG: Total counts: %zu classes, %zu methods, %zu fields\n", 
+               *class_count, total_method_count, total_field_count);
+    }
+    
+    // Allocate memory for classes, methods, and fields
+    if (*class_count > 0) {
+        *classes = malloc(*class_count * sizeof(class_entry_t));
+        if (*classes == NULL) return false;
+    } else {
+        *classes = NULL;
+    }
+    
+    if (total_method_count > 0) {
+        *methods = malloc(total_method_count * sizeof(method_entry_t));
+        if (*methods == NULL) {
+            if (*classes) free(*classes);
+            return false;
+        }
+    } else {
+        *methods = NULL;
+    }
+    
+    if (total_field_count > 0) {
+        *fields = malloc(total_field_count * sizeof(field_entry_t));
+        if (*fields == NULL) {
+            if (*classes) free(*classes);
+            if (*methods) free(*methods);
+            return false;
+        }
+    } else {
+        *fields = NULL;
+    }
+    
+    // Set the counts
+    *method_count = total_method_count;
+    *field_count = total_field_count;
+    
+    // Second pass: seek back to beginning and read all class data
+    if (fseek(reader->file, reader->header.data_offset + section->offset, SEEK_SET) != 0) {
+        if (*classes) free(*classes);
+        if (*methods) free(*methods);
+        if (*fields) free(*fields);
+        return false;
+    }
+    
+    // Read the class data and inline methods/fields
+    size_t method_index = 0;
+    size_t field_index = 0;
+    
+    for (size_t i = 0; i < *class_count; i++) {
+        // Read class entry
+        if (fread(&(*classes)[i], sizeof(class_entry_t), 1, reader->file) != 1) {
+            if (*classes) free(*classes);
+            if (*methods) free(*methods);
+            if (*fields) free(*fields);
+            return false;
+        }
+        
+        // Read inline methods for this class
+        for (size_t j = 0; j < (*classes)[i].method_count; j++) {
+            if (fread(&(*methods)[method_index], sizeof(method_entry_t), 1, reader->file) != 1) {
+                if (*classes) free(*classes);
+                if (*methods) free(*methods);
+                if (*fields) free(*fields);
+                return false;
+            }
+            method_index++;
+        }
+        
+        // Read inline fields for this class
+        for (size_t j = 0; j < (*classes)[i].field_count; j++) {
+            if (fread(&(*fields)[field_index], sizeof(field_entry_t), 1, reader->file) != 1) {
+                if (*classes) free(*classes);
+                if (*methods) free(*methods);
+                if (*fields) free(*fields);
+                return false;
+            }
+            field_index++;
+        }
+    }
+    
+    if (reader->debug_output) {
+        printf("Read %zu classes from offset %llu:\n", 
+               *class_count, (unsigned long long)(reader->header.data_offset + section->offset));
+        for (size_t i = 0; i < *class_count; i++) {
+            printf("  Class %zu: name='%s', id=%llu, fields=%u, methods=%u\n", 
+                   i, (*classes)[i].class_name, (unsigned long long)(*classes)[i].class_id, 
+                   (*classes)[i].field_count, (*classes)[i].method_count);
+        }
+    }
+    
+    return true;
+}
+
 
 bool arxmod_reader_load_app_section(arxmod_reader_t *reader, char **app_name, uint8_t **app_data, size_t *app_data_size)
 {

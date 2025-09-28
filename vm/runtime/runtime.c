@@ -26,6 +26,9 @@ bool runtime_init(runtime_context_t *runtime, const runtime_config_t *config)
         return false;
     }
     
+    if (config && config->debug_mode) {
+        printf("Runtime: Initializing runtime\n");
+    }
     memset(runtime, 0, sizeof(runtime_context_t));
     
     // Use default config if none provided
@@ -101,6 +104,11 @@ bool runtime_load_program(runtime_context_t *runtime, const char *filename)
         return false;
     }
     
+    if (!loader_load_classes_section(&runtime->loader)) {
+        printf("Error: Failed to load classes section\n");
+        return false;
+    }
+    
     if (!loader_load_strings_section(&runtime->loader)) {
         printf("Error: Failed to load strings section\n");
         return false;
@@ -123,6 +131,123 @@ bool runtime_load_program(runtime_context_t *runtime, const char *filename)
     return true;
 }
 
+bool runtime_call_main_procedure(runtime_context_t *runtime)
+{
+    if (runtime == NULL || !runtime->initialized) {
+        return false;
+    }
+    
+    if (runtime->config.debug_mode) {
+        printf("Runtime: Looking for App.Main entry point\n");
+    }
+    
+    // Find the App class in the class manifest
+    uint64_t app_class_id = 0;
+    if (!vm_resolve_class_id(&runtime->vm, "App", &app_class_id)) {
+        if (runtime->config.debug_mode) {
+            printf("Runtime: App class not found in class manifest\n");
+        }
+        return false;
+    }
+    
+    if (runtime->config.debug_mode) {
+        printf("Runtime: Found App class with ID %llu\n", (unsigned long long)app_class_id);
+    }
+    
+    // Instantiate the App class (allocate memory for the App object)
+    uint64_t app_object_address = 0;
+    if (!vm_instantiate_class(&runtime->vm, app_class_id, &app_object_address)) {
+        if (runtime->config.debug_mode) {
+            printf("Runtime: Failed to instantiate App class\n");
+        }
+        return false;
+    }
+    
+    if (runtime->config.debug_mode) {
+        printf("Runtime: Instantiated App object at address 0x%llx\n", (unsigned long long)app_object_address);
+    }
+    
+    // Check module type from header flags
+    bool is_library = (runtime->vm.module_header.flags & ARXMOD_FLAG_LIBRARY) != 0;
+    bool is_executable = (runtime->vm.module_header.flags & ARXMOD_FLAG_EXECUTABLE) != 0;
+    
+    if (runtime->config.debug_mode) {
+        printf("Runtime: Module flags: 0x%08x (Library: %s, Executable: %s)\n", 
+               runtime->vm.module_header.flags, 
+               is_library ? "YES" : "NO", 
+               is_executable ? "YES" : "NO");
+    }
+    
+    // Handle library modules
+    if (is_library) {
+        if (runtime->config.debug_mode) {
+            printf("Runtime: This is a library module - no entry point execution\n");
+            printf("Runtime: Module contains %zu classes that can be used by other modules\n", 
+                   runtime->vm.class_system.class_count);
+        }
+        
+        // For library modules, we don't execute anything
+        // The classes are loaded and available for use by other modules
+        printf("Library module loaded successfully with %zu classes\n", runtime->vm.class_system.class_count);
+        return true;
+    }
+    
+    // Handle executable modules - find the entry point method
+    uint64_t entry_point_address = 0;
+    bool has_entry_point = false;
+    
+    // Use manifest to find App.Main entry point (one-time lookup, not runtime)
+    if (runtime->vm.class_system.method_count > 0) {
+        // Find Main method in the methods array
+        for (size_t i = 0; i < runtime->vm.class_system.method_count; i++) {
+            if (strcmp(runtime->vm.class_system.methods[i].method_name, "Main") == 0) {
+                entry_point_address = runtime->vm.class_system.methods[i].offset;
+                has_entry_point = true;
+                if (runtime->config.debug_mode) {
+                    printf("Runtime: Found App.Main entry point at offset %llu (from manifest)\n", 
+                           (unsigned long long)entry_point_address);
+                }
+                break;
+            }
+        }
+    }
+    
+    // Check if executable module has entry point
+    if (is_executable && !has_entry_point) {
+        printf("Error: Executable module declared but no entry point (App.Main) found\n");
+        return false;
+    }
+    
+    if (runtime->config.debug_mode) {
+        printf("Runtime: Entry point method starts at instruction %llu (address 0x%llx)\n", 
+               (unsigned long long)entry_point_address, (unsigned long long)entry_point_address);
+    }
+    
+    // Set up the execution context to call Main
+    // Push the object address (this pointer) onto the stack
+    if (!vm_push(&runtime->vm, app_object_address)) {
+        if (runtime->config.debug_mode) {
+            printf("Runtime: Failed to push object address onto stack\n");
+        }
+        return false;
+    }
+    
+    // Set up a call to the entry point procedure
+    // The VM will execute the call instruction to jump to the entry point
+    if (runtime->config.debug_mode) {
+        printf("Runtime: Setting up call to entry point procedure with object context\n");
+    }
+    
+    // Set up a proper call stack frame for the Main procedure
+    // This ensures the procedure can return properly when it ends
+    if (!vm_call(&runtime->vm, entry_point_address / sizeof(instruction_t), 0)) {
+        printf("Error: Failed to set up call stack frame for Main procedure\n");
+        return false;
+    }
+    
+    return true;
+}
+
 bool runtime_execute(runtime_context_t *runtime)
 {
     if (runtime == NULL || !runtime->initialized) {
@@ -133,7 +258,17 @@ bool runtime_execute(runtime_context_t *runtime)
         printf("Starting program execution\n");
     }
     
+    // Find and call the Main procedure as entry point
+    if (!runtime_call_main_procedure(runtime)) {
+        printf("Error: Failed to find or call Main procedure\n");
+        return false;
+    }
+    
     // Execute the program
+    if (runtime->config.debug_mode) {
+        printf("Starting VM execution at PC=%zu\n", runtime->vm.pc);
+    }
+    
     bool success = vm_execute(&runtime->vm);
     
     if (runtime->config.debug_mode) {

@@ -34,6 +34,7 @@ int main(int argc, char *argv[])
     
     // Parse command line arguments
     if (!parse_arguments(argc, argv, &options)) {
+        printf("Main: Failed to parse arguments\n");
         return 1;
     }
     
@@ -41,10 +42,11 @@ int main(int argc, char *argv[])
     debug_mode = options.debug_mode;
     
     if (options.debug_mode) {
+        printf("Main: Starting ARX VM\n");
+        printf("Main: Parsing command line arguments\n");
+        printf("Main: Initializing runtime\n");
         print_vm_info();
     }
-    
-    // Initialize runtime
     runtime_context_t runtime;
     runtime_config_t config = RUNTIME_CONFIG_DEFAULT;
     config.debug_mode = options.debug_mode;
@@ -87,7 +89,13 @@ int main(int argc, char *argv[])
         }
         success = runtime.vm.halted;
     } else {
+        if (options.debug_mode) {
+            printf("Main: About to call runtime_execute\n");
+        }
         success = runtime_execute(&runtime);
+        if (options.debug_mode) {
+            printf("Main: runtime_execute returned %s\n", success ? "true" : "false");
+        }
     }
     
     // Dump final state if requested

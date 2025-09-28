@@ -1,14 +1,15 @@
 # ARX Architecture Overview
 
 ## High-Level Architecture
-- ARX Source (.arx) → Parser → Bytecode (.arxmod) → VM → Execution
+- ARX Source (.arx) → Parser → AST → Code Generator → Linker → Bytecode (.arxmod) → VM → Execution
 
 ## Core Components
 
 ### Compiler
 - **Lexer**: Tokenizes source code with keyword recognition
 - **Parser**: Builds AST, parses expressions, statements, and classes
-- **Codegen**: Emits instruction_t arrays for OO operations
+- **Code Generator**: Emits instruction_t arrays and collects class information
+- **Linker**: Resolves method/field references and patches bytecode with offsets
 - **Symbol Table**: Manages classes, methods, fields, and inheritance
 - **Type Checker**: Validates types and semantics
 
@@ -28,9 +29,10 @@
 ## Data Flow
 1. Source code is tokenized by lexer
 2. Parser builds AST with actual values from source code
-3. Code generator traverses AST and emits dynamic bytecode instructions
-4. VM loads and executes bytecode with runtime value calculation
-5. Objects are managed by memory system
+3. Code generator traverses AST, collects class information, and emits bytecode with placeholder tokens
+4. Linker resolves method/field references and patches bytecode with calculated offsets
+5. VM loads and executes patched bytecode with pre-calculated offsets
+6. Objects are managed by memory system with efficient offset-based access
 
 ## 🎯 **AST-Based Architecture**
 

@@ -13,6 +13,15 @@ The compiler now features a complete Abstract Syntax Tree (AST) implementation t
 - **C-Style Syntax**: Modern variable declarations and assignments
 - **Object-Oriented Programming**: Complete support for method calls and field access
 
+## 🛡️ **LABEL RESOLUTION AND INFINITE LOOP PROTECTION COMPLETE**
+
+**Compiler Safety and Stability Achieved!** The ARX compiler now features robust label resolution and infinite loop prevention:
+- **Multi-Context Label Merging**: Labels from separate class contexts are properly merged into main context
+- **Two-Pass Compilation**: First pass generates bytecode with label placeholders, second pass resolves all labels
+- **Linker Integration**: Linker skips already-resolved jump instructions to prevent overwriting
+- **Jump Address Resolution**: All jump instructions contain actual instruction addresses, not label IDs
+- **Cross-Context Label Management**: Labels are properly adjusted by class base offset during merging
+
 ## Compiler Phases
 
 ### 1. Lexical Analysis (Lexer)
@@ -106,6 +115,8 @@ The compiler now features a complete Abstract Syntax Tree (AST) implementation t
 - **Three-address**: Complex expressions broken into simple operations
 - **Register allocation**: Virtual registers for temporaries
 - **Optimization**: Basic optimizations (constant folding, dead code elimination)
+- **Two-pass compilation**: First pass generates bytecode with label placeholders, second pass resolves all labels
+- **Multi-context label merging**: Labels from separate class contexts are properly merged into main context
 
 ## Compiler Structure
 

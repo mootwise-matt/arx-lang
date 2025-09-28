@@ -56,3 +56,10 @@
 - Write tests for new features
 - Document public APIs
 - Maintain cross-platform compatibility
+
+## Testing Workflow
+- **ALWAYS test ALL examples after changes**: Run comprehensive test of all examples in `/examples/` folder
+- **Test both compilation and execution**: Verify both `.arx` compilation and `.arxmod` VM execution
+- **Test before committing**: Never ask to commit/push without verifying ALL examples run correctly
+- **Use debug mode when needed**: `./arx -debug example.arx` for troubleshooting
+- **Comprehensive test command**: `for example in examples/*.arx; do ./arx "$example" && ./arxvm "${example%.arx}.arxmod"; done`

@@ -96,8 +96,20 @@ ast_node_t* parse_class(parser_context_t *context)
     
     // Parse fields and methods
     while (context->lexer->token != TOK_END && context->lexer->token != TOK_EOF) {
-        if (context->lexer->token == TOK_IDENT) {
-            // Field declaration
+        if (debug_mode) {
+            printf("DEBUG: Class parsing - token: %s\n", token_to_string(context->lexer->token));
+        }
+        
+        if (context->lexer->token == TOK_STRING || 
+            context->lexer->token == TOK_INTEGER || 
+            context->lexer->token == TOK_BOOLEAN || 
+            context->lexer->token == TOK_CHAR || 
+            context->lexer->token == TOK_IDENT ||
+            context->lexer->token == TOK_ARRAY) {
+            // Field declaration (C-style: type name;)
+            if (debug_mode) {
+                printf("DEBUG: Parsing field declaration\n");
+            }
             ast_node_t *field = parse_field(context);
             if (field == NULL) {
                 return NULL;
@@ -105,17 +117,26 @@ ast_node_t* parse_class(parser_context_t *context)
             ast_add_child(class_node, field);
         } else if (context->lexer->token == TOK_PROCEDURE || context->lexer->token == TOK_FUNCTION) {
             // Method declaration
+            if (debug_mode) {
+                printf("DEBUG: Parsing method declaration - token: %s\n", token_to_string(context->lexer->token));
+            }
             ast_node_t *method = parse_method(context);
             if (method == NULL) {
                 return NULL;
             }
             ast_add_child(class_node, method);
+            if (debug_mode) {
+                printf("DEBUG: Added method to class: %s (type=%d)\n", method->value ? method->value : "unknown", method->type);
+            }
         } else if (context->lexer->token == TOK_SEMICOL) {
             // Skip empty statements
             if (!advance_token(context)) {
                 return NULL;
             }
         } else {
+            if (debug_mode) {
+                printf("DEBUG: Unexpected token in class body: %s\n", token_to_string(context->lexer->token));
+            }
             parser_error(context, "Unexpected token in class body");
             return NULL;
         }
@@ -137,7 +158,7 @@ ast_node_t* parse_class(parser_context_t *context)
         if (class_node->children[i]->type == AST_FIELD) {
             field_count++;
         } else if (class_node->children[i]->type == AST_METHOD || 
-                   class_node->children[i]->type == AST_PROCEDURE || 
+                   class_node->children[i]->type == AST_PROCEDURE ||
                    class_node->children[i]->type == AST_FUNCTION) {
             method_count++;
         }
@@ -155,7 +176,7 @@ ast_node_t* parse_class(parser_context_t *context)
         } else {
             if (debug_mode) {
                 printf("Added class '%s' to symbol table (fields: %zu, methods: %zu, parent: %s)\n", 
-                       class_name, field_count, method_count, parent_class ? parent_class : "none");
+                        class_name, field_count, method_count, parent_class ? parent_class : "none");
             }
         }
     }
@@ -181,23 +202,10 @@ ast_node_t* parse_field(parser_context_t *context)
     ast_node_t *field = ast_create_node(AST_FIELD);
     if (field == NULL) {
         parser_error(context, "Failed to create field node");
-        return false;
-    }
-    
-    // Parse field name
-    if (!expect_token(context, TOK_IDENT)) {
         return NULL;
     }
     
-    ast_set_value(field, context->lexer->tokstart);
-    ast_set_number(field, context->lexer->toklen);
-    
-    // Parse type
-    if (!expect_token(context, TOK_COLON)) {
-        return NULL;
-    }
-    
-    // Expect type (can be identifier or keyword)
+    // Parse type first (C-style: type name;)
     if (!match_token(context, TOK_IDENT) && 
         !match_token(context, TOK_INTEGER) && 
         !match_token(context, TOK_BOOLEAN) && 
@@ -208,7 +216,54 @@ ast_node_t* parse_field(parser_context_t *context)
         return NULL;
     }
     
+    // Store type name before advancing token
+    char *type_name = malloc(context->lexer->toklen + 1);
+    if (type_name == NULL) {
+        parser_error(context, "Failed to allocate memory for type name");
+        return NULL;
+    }
+    strncpy(type_name, context->lexer->tokstart, context->lexer->toklen);
+    type_name[context->lexer->toklen] = '\0';
+    
+    if (debug_mode) {
+        printf("DEBUG: Parsing field type: %s\n", type_name);
+    }
+    
+    // Advance token after capturing type
     if (!advance_token(context)) {
+        free(type_name);
+        return NULL;
+    }
+    
+    // Parse field name
+    if (context->lexer->token != TOK_IDENT) {
+        parser_error(context, "Expected field name");
+        free(type_name);
+        return NULL;
+    }
+    
+    // Store field name before advancing token
+    char *field_name = malloc(context->lexer->toklen + 1);
+    if (field_name == NULL) {
+        parser_error(context, "Failed to allocate memory for field name");
+        free(type_name);
+        return NULL;
+    }
+    strncpy(field_name, context->lexer->tokstart, context->lexer->toklen);
+    field_name[context->lexer->toklen] = '\0';
+    
+    if (debug_mode) {
+        printf("DEBUG: Parsing field: %s %s\n", type_name, field_name);
+    }
+    
+    ast_set_value(field, field_name);
+    ast_set_number(field, context->lexer->toklen);
+    
+    free(field_name);
+    
+    // Advance token after capturing field name
+    if (!advance_token(context)) {
+        free(type_name);
         return NULL;
     }
     
@@ -216,12 +271,15 @@ ast_node_t* parse_field(parser_context_t *context)
     ast_node_t *type_node = ast_create_node(AST_IDENTIFIER);
     if (type_node == NULL) {
         parser_error(context, "Failed to create type node");
-        return false;
+        free(type_name);
+        return NULL;
     }
     
-    ast_set_value(type_node, context->lexer->tokstart);
-    ast_set_number(type_node, context->lexer->toklen);
+    ast_set_value(type_node, type_name);
+    ast_set_number(type_node, strlen(type_name));
     ast_add_child(field, type_node);
+    
+    free(type_name);
     
     if (!expect_token(context, TOK_SEMICOL)) {
         return NULL;
@@ -247,7 +305,7 @@ ast_node_t* parse_method(parser_context_t *context)
         return false;
     }
     
-    // Parse method type
+    // Parse method type - initially set as PROCEDURE, will be changed to FUNCTION if return type is found
     if (context->lexer->token == TOK_PROCEDURE) {
         method->type = AST_PROCEDURE;
     } else if (context->lexer->token == TOK_FUNCTION) {
@@ -267,8 +325,8 @@ ast_node_t* parse_method(parser_context_t *context)
         return NULL;
     }
     
-    // Clear any previous method string literals
-    parser_clear_method_strings(context);
+    // Don't clear method string literals - they should be collected globally
+    // parser_clear_method_strings(context);
     
     // Create null-terminated string for method name
     char *method_name = malloc(context->lexer->toklen + 1);
@@ -307,9 +365,12 @@ ast_node_t* parse_method(parser_context_t *context)
         }
     }
     
-    // Parse return type for functions
-    if (method->type == AST_FUNCTION) {
-        if (!expect_token(context, TOK_COLON)) {
+    // Check for return type - if found, change method type to FUNCTION
+    if (context->lexer->token == TOK_COLON) {
+        // This is a procedure with return type, so it's actually a function
+        method->type = AST_FUNCTION;
+        
+        if (!advance_token(context)) {
             return false;
         }
         
@@ -350,7 +411,10 @@ ast_node_t* parse_method(parser_context_t *context)
             } else if (context->lexer->token == TOK_END) {
                 brace_count--;
                 if (brace_count == 0) {
-                    // Found the matching END, break out of loop
+                    // Found the matching END, advance past it and break
+                    if (!advance_token(context)) {
+                        return NULL;
+                    }
                     break;
                 }
                 if (!advance_token(context)) {
@@ -380,36 +444,29 @@ ast_node_t* parse_method(parser_context_t *context)
                 }
             }
         }
+        
+        // Skip trailing semicolon after method body if present
+        if (context->lexer->token == TOK_SEMICOL) {
+            if (!advance_token(context)) {
+                return NULL;
+            }
+        }
     } else if (context->lexer->token == TOK_SEMICOL) {
         // Method declaration without body (just skip the semicolon)
         if (!advance_token(context)) {
             return NULL;
         }
         
-        // Check if there's a method body after the semicolon
-        if (context->lexer->token != TOK_END && context->lexer->token != TOK_EOF) {
-            if (debug_mode) {
-                printf("Found method body, parsing statements\n");
-            }
-            // Parse method body statements using AST-based parsing
-            while (context->lexer->token != TOK_END && context->lexer->token != TOK_EOF) {
-                ast_node_t *stmt_node = parse_statement_ast(context);
-                if (stmt_node) {
-                    ast_add_child(method, stmt_node);
-                }
-                
-                // Skip semicolon after statement
-                if (context->lexer->token == TOK_SEMICOL) {
-                    if (!advance_token(context)) {
-                        return NULL;
-                    }
-                }
-            }
+        // For methods without BEGIN/END, we should NOT parse a body here
+        // The method declaration is complete after the semicolon
+        if (debug_mode) {
+            printf("Method declaration without body completed\n");
         }
     }
     
     if (debug_mode) {
-        printf("Method parsed successfully\n");
+        printf("Method parsed successfully: %s (type=%d)\n", method->value ? method->value : "unknown", method->type);
+        printf("DEBUG: After method parsing, current token: %s\n", token_to_string(context->lexer->token));
     }
     
     return method;

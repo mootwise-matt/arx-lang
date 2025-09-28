@@ -227,7 +227,7 @@ void display_bytecode(instruction_t *instructions, size_t instruction_count)
                 case OPR_WRITELN: printf("WRITELN"); break;
                 case OPR_OBJ_NEW: printf("OBJ_NEW"); break;
                 case OPR_OBJ_CALL_METHOD: printf("OBJ_CALL_METHOD"); break;
-                case OPR_OBJ_GET_FIELD: printf("OBJ_GET_FIELD"); break;
+                // Field opcodes removed - fields are accessed directly by name within class methods
                 default:          printf("OPR_%llu", (unsigned long long)operand); break;
             }
             printf(")");
@@ -301,8 +301,12 @@ bool compile_file(const char* input_file, const char* output_file)
     
     // Parse the source code
     ast_node_t *ast = parser_parse(&parser);
-    if (ast == NULL) {
-        printf("Error: Parsing failed\n");
+    if (ast == NULL || parser.error_count > 0) {
+        if (parser.error_count > 0) {
+            printf("Error: Parsing failed with %d errors\n", parser.error_count);
+        } else {
+            printf("Error: Parsing failed\n");
+        }
         free(source);
         return false;
     }

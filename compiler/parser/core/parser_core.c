@@ -143,13 +143,20 @@ bool parse_module(parser_context_t *context)
         return false;
     }
     
-    if (!expect_token(context, TOK_IDENT)) {
+    // Check for identifier token and read module name before advancing
+    if (!match_token(context, TOK_IDENT)) {
+        parser_error(context, "Expected module name identifier");
         return false;
     }
     
-    // Set module name
-    ast_set_value(module, context->lexer->tokstart);
+    // Set module name (before advancing to next token)
+    ast_set_value_from_token(module, context->lexer->tokstart, context->lexer->toklen);
     ast_set_number(module, context->lexer->toklen);
+    
+    // Now advance past the identifier
+    if (!advance_token(context)) {
+        return false;
+    }
     
     if (!expect_token(context, TOK_SEMICOL)) {
         return false;
@@ -170,13 +177,30 @@ bool parse_module(parser_context_t *context)
         }
     }
     
-    // Parse class declarations
-    while (context->lexer->token == TOK_CLASS) {
-        ast_node_t *class_node = parse_class(context);
-        if (class_node == NULL) {
-            return false;
+    // Parse class declarations and other module-level constructs
+    while (context->lexer->token != TOK_EOF) {
+        if (context->lexer->token == TOK_CLASS) {
+            ast_node_t *class_node = parse_class(context);
+            if (class_node == NULL) {
+                return false;
+            }
+            ast_add_child(module, class_node);
+        } else if (context->lexer->token == TOK_SEMICOL) {
+            // Skip empty statements
+            if (!advance_token(context)) {
+                return false;
+            }
+        } else if (context->lexer->token == TOK_EOL) {
+            // Skip end-of-line tokens
+            if (!advance_token(context)) {
+                return false;
+            }
+        } else {
+            // Unexpected token - try to advance and continue parsing
+            if (!advance_token(context)) {
+                break;
+            }
         }
-        ast_add_child(module, class_node);
     }
     
     if (debug_mode) {

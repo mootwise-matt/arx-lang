@@ -41,6 +41,6 @@ ast_node_t* parse_method_call_expression(parser_context_t *context, char *base_n
 ast_node_t* parse_field_access_expression(parser_context_t *context, char *base_name, char *member_name);
 
 // Object Creation Functions
-bool parse_new_expression(parser_context_t *context);
+ast_node_t* parse_new_expression(parser_context_t *context);
 bool parse_constructor_parameters(parser_context_t *context);
 bool parse_parenthesized_expression(parser_context_t *context);

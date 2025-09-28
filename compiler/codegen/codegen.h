@@ -9,6 +9,7 @@
 #include <stddef.h>
 #include "../parser/parser.h"
 #include "../common/opcodes.h"
+#include "../arxmod/arxmod.h"
 
 // Forward declaration
 typedef struct parser_context parser_context_t;
@@ -43,6 +44,19 @@ typedef struct {
     size_t variable_count;         // Number of variables
     size_t variable_capacity;      // Capacity of variables array
     size_t next_variable_address;  // Next available memory address
+    
+    // Class context for separate class compilation
+    ast_node_t *current_class;     // Current class being compiled
+    char *current_class_name;      // Name of current class
+    
+    // Method position tracking for accurate offset calculation
+    struct {
+        char *method_name;         // Method name
+        size_t start_instruction;  // Instruction index where method bytecode starts
+        size_t end_instruction;    // Instruction index where method bytecode ends
+    } *method_positions;           // Array of method positions
+    size_t method_position_count;  // Number of methods tracked
+    size_t method_position_capacity; // Capacity of method positions array
 } codegen_context_t;
 
 // Function prototypes
@@ -54,7 +68,18 @@ bool codegen_write_arxmod(codegen_context_t *context, const char *filename,
 void codegen_cleanup(codegen_context_t *context);
 
 // Code generation functions
+bool detect_entry_point(ast_node_t *root);
 bool generate_module(codegen_context_t *context, ast_node_t *node);
+bool build_class_separately(codegen_context_t *context, ast_node_t *class_node);
+
+// Method position tracking functions
+bool codegen_start_method_tracking(codegen_context_t *context, const char *method_name);
+bool codegen_end_method_tracking(codegen_context_t *context, const char *method_name);
+size_t codegen_get_method_offset(codegen_context_t *context, const char *method_name);
+
+// Unique class ID generation functions
+uint64_t codegen_generate_unique_class_id(const char *module_name, const char *class_name);
+
 bool generate_class(codegen_context_t *context, ast_node_t *node);
 bool generate_field(codegen_context_t *context, ast_node_t *node);
 bool generate_method(codegen_context_t *context, ast_node_t *node);
@@ -68,7 +93,8 @@ bool generate_binary_operation(codegen_context_t *context, ast_node_t *node);
 bool generate_unary_operation(codegen_context_t *context, ast_node_t *node);
 bool generate_method_call(codegen_context_t *context, ast_node_t *node);
 bool generate_field_access(codegen_context_t *context, ast_node_t *node);
-bool generate_new_expression(codegen_context_t *context, const char *class_name);
+bool generate_new_expression(codegen_context_t *context, ast_node_t *node);
+void generate_new_expression_ast(codegen_context_t *context, ast_node_t *node);
 bool generate_if_statement(codegen_context_t *context, ast_node_t *node);
 bool generate_while_statement(codegen_context_t *context, ast_node_t *node);
 bool generate_for_statement(codegen_context_t *context, ast_node_t *node);
@@ -106,3 +132,9 @@ void codegen_warning(codegen_context_t *context, const char *message);
 size_t create_label(codegen_context_t *context);
 void set_label(codegen_context_t *context, size_t label_id, size_t instruction_index);
 void resolve_labels(codegen_context_t *context);
+
+// Class collection functions
+bool collect_classes_from_ast(codegen_context_t *context, ast_node_t *ast, class_entry_t **classes, size_t *class_count, method_entry_t **methods, size_t *method_count, field_entry_t **fields, size_t *field_count);
+
+// AST placeholder resolution
+void resolve_ast_placeholders(ast_node_t *ast, class_entry_t *classes, size_t class_count, method_entry_t *methods, size_t method_count, field_entry_t *fields, size_t field_count);

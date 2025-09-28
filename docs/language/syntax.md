@@ -33,12 +33,47 @@ end;
 ## Object-Oriented Features
 - **Classes**: Define objects with fields and methods ✅ Working
 - **Inheritance**: `class ChildClass extends ParentClass` ✅ Working
-- **Fields**: Data members with types (`field: TYPE;`) ✅ Working
+- **Fields**: Data members with types (`TYPE field;`) ✅ Working
 - **Methods**: Functions and procedures ✅ Working
 - **Method Calls**: `obj.method()` ✅ Working
-- **Field Access**: `obj.field` ✅ Working
+- **Encapsulation**: Fields are private - access only through methods ✅ Working
 - **Object Creation**: `new ClassName` ✅ Working
 - **Method Overriding**: Child classes can override parent methods ✅ Working
+
+### Encapsulation Rules
+ARX enforces strict encapsulation for object-oriented programming:
+
+- **Private Fields**: All class fields are private and cannot be accessed directly from outside the class
+- **Method Access**: Fields can only be accessed through public methods (getters/setters)
+- **Internal Access**: Within a class, methods can access fields directly using field names
+- **No Direct Field Access**: Expressions like `obj.field` are not allowed - use `obj.getField()` instead
+
+```arx
+class Person
+  string name;    // Private field
+  integer age;    // Private field
+  
+  function getName: string
+  begin
+    return name;  // OK: internal access within class
+  end;
+  
+  function getAge: integer
+  begin
+    return age;   // OK: internal access within class
+  end;
+end;
+
+class App
+  procedure Main
+  begin
+    Person person1;
+    person1 = new Person;
+    writeln(person1.getName()); // OK: access through method
+    // writeln(person1.name);   // ERROR: direct field access forbidden
+  end;
+end;
+```
 
 ## Control Flow
 - **IF Statements**: `if condition then begin ... end;` ✅ Working
@@ -55,7 +90,6 @@ end;
 - **Assignment**: `=` (C-style assignment) ✅ Working
 - **Object Creation**: `new ClassName` ✅ Working
 - **Method Calls**: `obj.method()` ✅ Working
-- **Field Access**: `obj.field` ✅ Working
 - **String Concatenation**: `"Hello" + "World"` ✅ Working
 - **Parenthesized Expressions**: `(a + b) * c` ✅ Working
 
@@ -155,10 +189,21 @@ class App
 end;
 ```
 
-### Field Access Example
+### Encapsulation Example
 ```arx
 class Person
   string name;
+  integer age;
+  
+  function getName: string
+  begin
+    return name;
+  end;
+  
+  function getAge: integer
+  begin
+    return age;
+  end;
 end;
 
 class App
@@ -166,7 +211,9 @@ class App
   begin
     Person person1;
     person1 = new Person;
-    writeln(person1.name); // Output: "Field Value"
+    writeln(person1.getName()); // Access through method
+    writeln(person1.getAge());  // Access through method
+    // person1.name; // ERROR: Direct field access not allowed
   end;
 end;
 ```

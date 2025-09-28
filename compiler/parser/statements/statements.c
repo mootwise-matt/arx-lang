@@ -176,6 +176,13 @@ ast_node_t* parse_statement_ast(parser_context_t *context)
             // Parse IF statement
             return parse_if_statement(context);
             
+        case TOK_RETURN:
+            if (debug_mode) {
+                printf("*** RETURN CASE REACHED! ***\n");
+            }
+            // Parse RETURN statement
+            return parse_return_statement(context);
+            
         case TOK_WRITELN:
             // Parse the writeln statement and build proper AST structure
             ast_node_t *expr_node = parse_writeln_statement(context);
@@ -998,4 +1005,65 @@ ast_node_t* parse_if_statement(parser_context_t *context)
     }
     
     return if_node;
+}
+
+ast_node_t* parse_return_statement(parser_context_t *context)
+{
+    if (context == NULL) {
+        return NULL;
+    }
+    
+    if (debug_mode) {
+        printf("Parsing return statement\n");
+    }
+    
+    // Create return statement node
+    ast_node_t *return_node = ast_create_node(AST_RETURN_STMT);
+    if (!return_node) {
+        return NULL;
+    }
+    
+    // Advance past the 'return' keyword
+    if (!advance_token(context)) {
+        ast_destroy_node(return_node);
+        return NULL;
+    }
+    
+    // Parse the return expression (if any)
+    if (context->lexer->token != TOK_SEMICOL && context->lexer->token != TOK_EOF) {
+        if (debug_mode) {
+            printf("Parsing return expression\n");
+        }
+        
+        // Parse the expression to return
+        ast_node_t *expr_node = parse_expression(context);
+        if (expr_node) {
+            ast_add_child(return_node, expr_node);
+            if (debug_mode) {
+                printf("Return expression parsed successfully\n");
+            }
+        } else {
+            if (debug_mode) {
+                printf("No return expression found\n");
+            }
+        }
+    } else {
+        if (debug_mode) {
+            printf("Return statement without expression\n");
+        }
+    }
+    
+    // Skip semicolon if present
+    if (context->lexer->token == TOK_SEMICOL) {
+        if (!advance_token(context)) {
+            ast_destroy_node(return_node);
+            return NULL;
+        }
+    }
+    
+    if (debug_mode) {
+        printf("Return statement parsed successfully with %zu children\n", return_node->child_count);
+    }
+    
+    return return_node;
 }

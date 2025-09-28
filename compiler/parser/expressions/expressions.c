@@ -401,11 +401,8 @@ ast_node_t* parse_primary(parser_context_t *context)
             break;
             
         case TOK_NEW:
-            // TODO: Implement NEW expression parsing
-            if (debug_mode) {
-                printf("NEW expression not yet implemented in AST\n");
-            }
-            return NULL;
+            node = parse_new_expression(context);
+            break;
             
         case TOK_LPAREN:
             // Parse parenthesized expression: (expression)
@@ -687,9 +684,11 @@ ast_node_t* parse_method_call_expression(parser_context_t *context, char *base_n
     }
     
     // Set the method call info
-    char *call_info = malloc(strlen(base_name) + strlen(member_name ? member_name : "") + 3);
+    size_t base_len = strlen(base_name);
+    size_t member_len = member_name ? strlen(member_name) : 0;
+    char *call_info = malloc(base_len + member_len + 3);
     if (call_info) {
-        sprintf(call_info, "%s.%s", base_name, member_name ? member_name : "");
+        snprintf(call_info, base_len + member_len + 3, "%s.%s", base_name, member_name ? member_name : "");
         ast_set_value(method_call, call_info);
         free(call_info);
     }
@@ -754,95 +753,19 @@ ast_node_t* parse_field_access_expression(parser_context_t *context, char *base_
         printf("Parsing field access: %s.%s\n", base_name, member_name);
     }
     
-    // Create field access AST node
-    ast_node_t *field_access = ast_create_node(AST_FIELD_ACCESS);
-    if (!field_access) {
-        free(base_name);
-        free(member_name);
-        return NULL;
-    }
-    
-    // Set the field access info
-    char *access_info = malloc(strlen(base_name) + strlen(member_name) + 2);
-    if (access_info) {
-        sprintf(access_info, "%s.%s", base_name, member_name);
-        ast_set_value(field_access, access_info);
-        free(access_info);
-    }
+    // ENCAPSULATION ENFORCEMENT: Direct field access is not allowed
+    // Fields can only be accessed through methods (getters/setters)
+    parser_error(context, "Direct field access not allowed - use methods instead (e.g., obj.getField())");
     
     if (debug_mode) {
-        printf("Field access parsed: %s.%s\n", base_name, member_name);
+        printf("Field access rejected due to encapsulation: %s.%s\n", base_name, member_name);
     }
     
     free(base_name);
     free(member_name);
-    return field_access;
+    return NULL;
 }
 
-bool parse_new_expression(parser_context_t *context)
-{
-    if (debug_mode) {
-        printf("Parsing NEW expression\n");
-    }
-    
-    // Reset constructor parameter information
-    context->constructor_param_count = 0;
-    context->has_constructor_params = false;
-    
-    // Consume NEW token
-    if (!advance_token(context)) {
-        return false;
-    }
-    
-    // Expect class name identifier
-    if (!match_token(context, TOK_IDENT)) {
-        parser_error(context, "Expected class name after NEW");
-        return false;
-    }
-    
-    if (debug_mode) {
-        printf("NEW class: %.*s\n", (int)context->lexer->toklen, context->lexer->tokstart);
-    }
-    
-    // Store the class name for code generation
-    if (context->current_string_literal) {
-        free(context->current_string_literal);
-    }
-    
-    context->current_string_literal = malloc(context->lexer->toklen + 1);
-    if (context->current_string_literal) {
-        strncpy(context->current_string_literal, context->lexer->tokstart, context->lexer->toklen);
-        context->current_string_literal[context->lexer->toklen] = '\0';
-    }
-    
-    // Also store in current_new_class for NEW expression detection
-    if (context->current_new_class) {
-        free(context->current_new_class);
-    }
-    
-    context->current_new_class = malloc(context->lexer->toklen + 1);
-    if (context->current_new_class) {
-        strncpy(context->current_new_class, context->lexer->tokstart, context->lexer->toklen);
-        context->current_new_class[context->lexer->toklen] = '\0';
-        if (debug_mode) {
-            printf("Stored NEW class name: %s\n", context->current_new_class);
-        }
-    }
-    
-    // Consume class name
-    if (!advance_token(context)) {
-        return false;
-    }
-    
-    // Check for constructor parameters (parentheses)
-    if (match_token(context, TOK_LPAREN)) {
-        if (!parse_constructor_parameters(context)) {
-            return false;
-        }
-    }
-    
-    return true;
-}
 
 bool parse_constructor_parameters(parser_context_t *context)
 {
@@ -920,5 +843,54 @@ bool parse_parenthesized_expression(parser_context_t *context)
     }
     
     return true;
+}
+
+ast_node_t* parse_new_expression(parser_context_t *context)
+{
+    if (debug_mode) {
+        printf("Parsing NEW expression\n");
+    }
+    
+    // Expect NEW token
+    if (!expect_token(context, TOK_NEW)) {
+        return NULL;
+    }
+    
+    // Expect class name identifier
+    if (context->lexer->token != TOK_IDENT) {
+        parser_error(context, "Expected class name after NEW");
+        return NULL;
+    }
+    
+    // Create NEW expression node
+    ast_node_t *new_node = ast_create_node(AST_NEW_EXPR);
+    if (!new_node) {
+        parser_error(context, "Failed to create NEW expression node");
+        return NULL;
+    }
+    
+    // Store class name
+    char *class_name = malloc(context->lexer->toklen + 1);
+    if (!class_name) {
+        ast_destroy_node(new_node);
+        parser_error(context, "Failed to allocate memory for class name");
+        return NULL;
+    }
+    strncpy(class_name, context->lexer->tokstart, context->lexer->toklen);
+    class_name[context->lexer->toklen] = '\0';
+    
+    new_node->value = class_name;
+    
+    if (debug_mode) {
+        printf("NEW expression parsed: %s\n", class_name);
+    }
+    
+    // Advance past class name
+    if (!advance_token(context)) {
+        ast_destroy_node(new_node);
+        return NULL;
+    }
+    
+    return new_node;
 }
 

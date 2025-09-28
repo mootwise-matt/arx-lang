@@ -108,6 +108,12 @@ bool loader_validate_module(loader_context_t *loader)
         printf("Module validation successful\n");
     }
     
+    // Load module header into VM
+    if (!vm_load_module_header(loader->vm, &loader->reader.header)) {
+        printf("Error: Failed to load module header into VM\n");
+        return false;
+    }
+    
     return true;
 }
 
@@ -137,6 +143,71 @@ bool loader_load_code_section(loader_context_t *loader)
     
     if (loader->debug_output) {
         printf("Code section loaded: %zu instructions\n", instruction_count);
+    }
+    
+    return true;
+}
+
+bool loader_load_classes_section(loader_context_t *loader)
+{
+    if (loader == NULL || loader->vm == NULL) {
+        return false;
+    }
+    
+    if (loader->debug_output) {
+        printf("DEBUG: loader_load_classes_section called\n");
+    }
+    
+    class_entry_t *classes = NULL;
+    size_t class_count = 0;
+    method_entry_t *methods = NULL;
+    size_t method_count = 0;
+    field_entry_t *fields = NULL;
+    size_t field_count = 0;
+    
+    if (!arxmod_reader_load_classes_section(&loader->reader, &classes, &class_count, &methods, &method_count, &fields, &field_count)) {
+        printf("Error: Failed to load classes section\n");
+        return false;
+    }
+    
+    if (class_count == 0) {
+        if (loader->debug_output) {
+            printf("No classes section found\n");
+        }
+        return true;
+    }
+    
+    if (loader->debug_output) {
+        printf("Loader: About to load %zu classes into VM (methods and fields not loaded separately yet)\n", 
+               class_count);
+    }
+    
+    if (!vm_load_classes(loader->vm, classes, class_count, methods, method_count, fields, field_count)) {
+        printf("Error: Failed to load classes into VM\n");
+        if (classes) {
+            free(classes);
+        }
+        if (methods) {
+            free(methods);
+        }
+        if (fields) {
+            free(fields);
+        }
+        return false;
+    }
+    
+    if (loader->debug_output) {
+        printf("Loaded %zu classes into VM\n", class_count);
+    }
+    
+    if (classes) {
+        free(classes);
+    }
+    if (methods) {
+        free(methods);
+    }
+    if (fields) {
+        free(fields);
     }
     
     return true;

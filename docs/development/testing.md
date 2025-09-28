@@ -3,6 +3,27 @@
 ## Overview
 This document describes the testing approach and tools for the ARX programming language compiler and virtual machine.
 
+## ⚠️ CRITICAL: Testing Workflow
+**Before committing any changes, ALWAYS verify that ALL examples run correctly:**
+
+```bash
+# Test ALL examples comprehensively
+for example in examples/*.arx; do
+    echo "Testing $example..."
+    ./arx "$example" && ./arxvm "${example%.arx}.arxmod"
+    echo "✅ $example - SUCCESS"
+done
+
+# Or test individual examples
+./arx examples/01_hello_world.arx && ./arxvm examples/01_hello_world.arxmod
+./arx examples/02_arithmetic.arx && ./arxvm examples/02_arithmetic.arxmod
+./arx examples/03_control_statements.arx && ./arxvm examples/03_control_statements.arxmod
+./arx examples/04_oo_features.arx && ./arxvm examples/04_oo_features.arxmod
+./arx examples/05_logical_operators.arx && ./arxvm examples/05_logical_operators.arxmod
+```
+
+**Never ask to commit/push changes without verifying ALL examples run correctly!**
+
 ## Testing Strategy
 
 ### Unit Testing

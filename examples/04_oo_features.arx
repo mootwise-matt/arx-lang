@@ -7,49 +7,103 @@ class App
   begin
     writeln('=== ARX Object-Oriented Features Demo ===');
     
-    // Create Person objects
-    writeln('Creating Person objects...');
+    // Test 1: Basic Object Creation and Method Calls
+    writeln('');
+    writeln('=== Test 1: Basic Object Creation and Method Calls ===');
     Person person1;
     person1 = new Person;
     
-    Person person2;
-    person2 = new Person;
-    
-    // Access fields and call methods
+    writeln('Person 1 created successfully');
     writeln('Person 1 name: ' + person1.getName());
     writeln('Person 1 age: ' + person1.getAge());
     
+    // Test 2: Multiple Object Instances
+    writeln('');
+    writeln('=== Test 2: Multiple Object Instances ===');
+    Person person2;
+    person2 = new Person;
+    
+    writeln('Person 2 created successfully');
     writeln('Person 2 name: ' + person2.getName());
     writeln('Person 2 age: ' + person2.getAge());
     
+    // Test 3: Method Call Chaining and Complex Expressions
     writeln('');
+    writeln('=== Test 3: Method Call Chaining and Complex Expressions ===');
+    writeln('Person 1 info: ' + person1.getName() + ', age ' + person1.getAge());
+    writeln('Person 2 info: ' + person2.getName() + ', age ' + person2.getAge());
     
-    // Create Student objects (inheritance)
-    writeln('Creating Student objects (inheritance)...');
+    // Test 4: Inheritance - Student Class
+    writeln('');
+    writeln('=== Test 4: Inheritance - Student Class ===');
     Student student1;
     student1 = new Student;
     
-    Student student2;
-    student2 = new Student;
-    
-    // Access inherited and new fields/methods
+    writeln('Student 1 created successfully');
     writeln('Student 1 name: ' + student1.getName());
     writeln('Student 1 age: ' + student1.getAge());
     writeln('Student 1 major: ' + student1.getMajor());
     
+    // Test 5: Multiple Student Instances
+    writeln('');
+    writeln('=== Test 5: Multiple Student Instances ===');
+    Student student2;
+    student2 = new Student;
+    
+    writeln('Student 2 created successfully');
     writeln('Student 2 name: ' + student2.getName());
     writeln('Student 2 age: ' + student2.getAge());
     writeln('Student 2 major: ' + student2.getMajor());
     
+    // Test 6: Mixed Object Types
     writeln('');
-    
-    // Demonstrate method calls (parameters not yet implemented)
-    writeln('Testing method calls...');
-    writeln('Note: Method parameters are planned but not yet implemented');
+    writeln('=== Test 6: Mixed Object Types ===');
     writeln('Person 1: ' + person1.getName() + ', age ' + person1.getAge());
     writeln('Student 1: ' + student1.getName() + ', age ' + student1.getAge() + ', major ' + student1.getMajor());
+    writeln('Person 2: ' + person2.getName() + ', age ' + person2.getAge());
+    writeln('Student 2: ' + student2.getName() + ', age ' + student2.getAge() + ', major ' + student2.getMajor());
     
-    writeln('=== OO Features Demo Complete ===');
+    // Test 7: Method Call Variations
+    writeln('');
+    writeln('=== Test 7: Method Call Variations ===');
+    writeln('Testing different method call patterns...');
+    
+    // Simple method calls
+    writeln('Simple getName(): ' + person1.getName());
+    writeln('Simple getAge(): ' + person1.getAge());
+    
+    // Method calls in expressions
+    writeln('Method in expression: ' + student1.getName() + ' is ' + student1.getAge() + ' years old');
+    
+    // Test 8: Field Access and Method Calls
+    writeln('');
+    writeln('=== Test 8: Field Access and Method Calls ===');
+    writeln('Testing field access through methods...');
+    writeln('Person 1 name field via method: ' + person1.getName());
+    writeln('Student 1 major field via method: ' + student1.getMajor());
+    
+    // Test 9: Constructor Testing
+    writeln('');
+    writeln('=== Test 9: Constructor Testing ===');
+    writeln('Testing constructors (init methods)...');
+    writeln('Person constructor sets: name=' + person1.getName() + ', age=' + person1.getAge());
+    writeln('Student constructor sets: name=' + student1.getName() + ', age=' + student1.getAge() + ', major=' + student1.getMajor());
+    
+    // Test 10: Complex Object Interactions
+    writeln('');
+    writeln('=== Test 10: Complex Object Interactions ===');
+    writeln('Testing complex object interactions...');
+    writeln('Person 1: ' + person1.getName() + ' (' + person1.getAge() + ')');
+    writeln('Person 2: ' + person2.getName() + ' (' + person2.getAge() + ')');
+    writeln('Student 1: ' + student1.getName() + ' (' + student1.getAge() + ') - ' + student1.getMajor());
+    writeln('Student 2: ' + student2.getName() + ' (' + student2.getAge() + ') - ' + student2.getMajor());
+    
+    writeln('');
+    writeln('=== All OO Features Tests Complete ===');
+    writeln('Total objects created: 4 (2 Person, 2 Student)');
+    writeln('Total method calls: 16+');
+    writeln('Inheritance tested: Student extends Person');
+    writeln('Method resolution tested: getName, getAge, getMajor');
   end;
 end;
 

@@ -68,6 +68,23 @@ void ast_set_value(ast_node_t *node, const char *value)
     }
 }
 
+void ast_set_value_from_token(ast_node_t *node, const char *token_start, size_t token_length)
+{
+    if (node == NULL || token_start == NULL || token_length == 0) {
+        return;
+    }
+    
+    if (node->value != NULL) {
+        free(node->value);
+    }
+    
+    node->value = malloc(token_length + 1);
+    if (node->value != NULL) {
+        strncpy(node->value, token_start, token_length);
+        node->value[token_length] = '\0'; // Ensure null termination
+    }
+}
+
 void ast_set_number(ast_node_t *node, uint64_t number)
 {
     if (node != NULL) {

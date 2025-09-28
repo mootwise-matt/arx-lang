@@ -8,6 +8,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
+#include "../common/arxmod_constants.h"
 #include "../common/opcodes.h"
 
 // ARX Module Writer
@@ -20,6 +21,8 @@ typedef struct {
     size_t section_count;           // Number of sections
     arxmod_toc_entry_t *toc_entries; // TOC entries
     size_t toc_capacity;            // TOC capacity
+    uint32_t module_flags;          // Module flags (library/executable)
+    uint64_t entry_point;           // Entry point offset (pre-calculated by linker)
     bool debug_output;              // Debug output flag
 } arxmod_writer_t;
 
@@ -65,13 +68,48 @@ typedef struct {
     uint64_t file_name_offset;      // Offset to filename in string table
 } debug_entry_t;
 
+// Method entry for class manifest
+typedef struct {
+    char        method_name[32];   // Method name (null-terminated)
+    uint64_t    method_id;         // Unique method ID
+    uint64_t    offset;            // Offset from class base address
+    uint32_t    parameter_count;   // Number of parameters
+    uint32_t    flags;             // Method flags (static, virtual, etc.)
+} method_entry_t;
+
+// Field entry for class manifest
+typedef struct {
+    char        field_name[32];    // Field name (null-terminated)
+    uint64_t    field_id;          // Unique field ID
+    uint64_t    offset;            // Offset from object base address
+    uint32_t    type_id;           // Type ID (for type checking)
+    uint32_t    flags;             // Field flags (private, protected, etc.)
+} field_entry_t;
+
+// Class table entry - self-contained with inline methods and fields
+typedef struct {
+    char        class_name[32];    // Class name (null-terminated)
+    uint64_t    class_id;          // Unique class ID
+    uint32_t    field_count;       // Number of fields
+    uint32_t    method_count;      // Number of methods
+    uint64_t    parent_class_id;   // Parent class ID (0 if none)
+    uint32_t    flags;             // Class flags
+    uint32_t    reserved;          // Reserved for future use
+    // Methods and fields are stored inline after this structure
+    // Each class is self-contained to avoid name conflicts
+} class_entry_t;
+
 // Function prototypes for writer
 bool arxmod_writer_init(arxmod_writer_t *writer, const char *filename);
+bool arxmod_writer_set_flags(arxmod_writer_t *writer, uint32_t flags);
+bool arxmod_writer_set_entry_point(arxmod_writer_t *writer, uint64_t entry_point);
+bool arxmod_writer_update_header(arxmod_writer_t *writer);
 bool arxmod_writer_write_header(arxmod_writer_t *writer, const char *app_name, size_t app_name_len);
 bool arxmod_writer_add_code_section(arxmod_writer_t *writer, instruction_t *instructions, size_t instruction_count);
 bool arxmod_writer_add_strings_section(arxmod_writer_t *writer, const char **strings, size_t string_count);
 bool arxmod_writer_add_symbols_section(arxmod_writer_t *writer, symbol_entry_t *symbols, size_t symbol_count);
 bool arxmod_writer_add_debug_section(arxmod_writer_t *writer, debug_entry_t *debug_info, size_t debug_count);
+bool arxmod_writer_add_classes_section(arxmod_writer_t *writer, class_entry_t *classes, size_t class_count, method_entry_t *methods, size_t method_count, field_entry_t *fields, size_t field_count);
 bool arxmod_writer_add_app_section(arxmod_writer_t *writer, const char *app_name, size_t app_name_len, const uint8_t *app_data, size_t app_data_size);
 bool arxmod_writer_finalize(arxmod_writer_t *writer);
 void arxmod_writer_cleanup(arxmod_writer_t *writer);
@@ -85,6 +123,7 @@ bool arxmod_reader_load_code_section(arxmod_reader_t *reader, instruction_t **in
 bool arxmod_reader_load_strings_section(arxmod_reader_t *reader, char ***strings, size_t *string_count);
 bool arxmod_reader_load_symbols_section(arxmod_reader_t *reader, symbol_entry_t **symbols, size_t *symbol_count);
 bool arxmod_reader_load_debug_section(arxmod_reader_t *reader, debug_entry_t **debug_info, size_t *debug_count);
+bool arxmod_reader_load_classes_section(arxmod_reader_t *reader, class_entry_t **classes, size_t *class_count, method_entry_t **methods, size_t *method_count, field_entry_t **fields, size_t *field_count);
 bool arxmod_reader_load_app_section(arxmod_reader_t *reader, char **app_name, uint8_t **app_data, size_t *app_data_size);
 void arxmod_reader_cleanup(arxmod_reader_t *reader);
 

@@ -27,6 +27,7 @@ bool loader_validate_module(loader_context_t *loader);
 
 // Section loading
 bool loader_load_code_section(loader_context_t *loader);
+bool loader_load_classes_section(loader_context_t *loader);
 bool loader_load_strings_section(loader_context_t *loader);
 bool loader_load_symbols_section(loader_context_t *loader);
 bool loader_load_debug_section(loader_context_t *loader);

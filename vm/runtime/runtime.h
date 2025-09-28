@@ -33,6 +33,7 @@ void runtime_cleanup(runtime_context_t *runtime);
 
 // Program execution
 bool runtime_load_program(runtime_context_t *runtime, const char *filename);
+bool runtime_call_main_procedure(runtime_context_t *runtime);
 bool runtime_execute(runtime_context_t *runtime);
 bool runtime_step(runtime_context_t *runtime);
 

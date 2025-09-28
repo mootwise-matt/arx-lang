@@ -82,10 +82,8 @@ typedef enum
     
     // Object system operations
     OPR_OBJ_CREATE = 40,    // Create object instance
-    OPR_OBJ_GET_FIELD = 41, // Get object field
-    OPR_OBJ_SET_FIELD = 42, // Set object field
-    OPR_OBJ_CALL_METHOD = 43, // Call object method
-    OPR_OBJ_RETURN = 44,    // Return from method
+    OPR_OBJ_CALL_METHOD = 41, // Call object method
+    OPR_OBJ_RETURN = 42,    // Return from method
     OPR_OBJ_SELF = 45,      // Reference to self
     OPR_OBJ_NEW = 46,       // NEW operator
     OPR_OBJ_DOT = 47,       // Dot operator for field/method access
@@ -103,23 +101,26 @@ typedef struct
 #pragma pack(pop)
 
 // ARX Module File Format (.arxmod)
-// 64-byte header
+// 80-byte header (packed)
+#pragma pack(push, 1)
 typedef struct
 {
     char        magic[8];        // "ARXMOD\0\0" - file format identifier
     uint32_t    version;         // Format version (1)
     uint32_t    flags;           // Format flags (reserved for future use)
-    uint64_t    header_size;     // Size of this header (64)
+    uint64_t    header_size;     // Size of this header (80)
     uint64_t    toc_offset;      // Offset to Table of Contents
     uint64_t    toc_size;        // Size of Table of Contents
     uint64_t    data_offset;     // Offset to data sections
     uint64_t    data_size;       // Total size of all data sections
     uint64_t    app_name_len;    // Length of APP object name
     uint64_t    app_data_size;   // Size of APP object data
-    uint64_t    reserved[1];     // Reserved for future use
+    uint64_t    entry_point;     // Entry point offset (pre-calculated by linker)
 } arxmod_header_t;
+#pragma pack(pop)
 
 // Table of Contents entry
+#pragma pack(push, 1)
 typedef struct
 {
     char        section_name[16]; // Section name (null-terminated)
@@ -128,19 +129,13 @@ typedef struct
     uint32_t    flags;            // Section flags
     uint32_t    reserved;         // Reserved for future use
 } arxmod_toc_entry_t;
+#pragma pack(pop)
 
 // ARX Module Section Names
-#define ARXMOD_SECTION_CODE     "CODE"
-#define ARXMOD_SECTION_STRINGS  "STRINGS"
-#define ARXMOD_SECTION_SYMBOLS  "SYMBOLS"
-#define ARXMOD_SECTION_DEBUG    "DEBUG"
-#define ARXMOD_SECTION_APP      "APP"
+// Section names moved to arxmod_constants.h
 
-// ARX Module Format Constants
-#define ARXMOD_MAGIC            "ARXMOD\0\0"
-#define ARXMOD_VERSION          1
-#define ARXMOD_HEADER_SIZE      64
-#define ARXMOD_ALIGNMENT        16
+// Include centralized constants
+#include "arxmod_constants.h"
 
 // String implementation
 typedef struct
