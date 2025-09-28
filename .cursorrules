@@ -16,7 +16,7 @@
 - **Architecture**: See `docs/architecture/` for detailed design
 - **Language Spec**: See `docs/language/` for syntax and grammar
 - **API Reference**: See `docs/api/` for function documentation
-- **Development**: See `docs/development/` for coding standards
+- **Development**: See `docs/development/` for coding standards and build process
 - **Historical Reference**: See `archive/README.md` for old implementation
 
 ## Key Design Principles
@@ -41,6 +41,13 @@
 - Method calls: obj.method()
 - Field access: obj.field
 - NEW operator for object creation
+
+## Build Process
+- **Always use root binaries**: `./arx` and `./arxvm` from project root
+- **Build directory binaries are intermediate**: Don't use `build/arx` or `build/arxvm` directly
+- **Automatic installation**: `make` automatically copies binaries to root
+- **After any build**: Root binaries are automatically updated
+- **See**: `docs/development/build-process.md` for complete build documentation
 
 ## Code Quality Standards
 - Use C99 with modern features
