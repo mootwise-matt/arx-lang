@@ -82,6 +82,9 @@ typedef struct arx_vm_context {
     // Memory management and garbage collection
     memory_manager_t memory_manager;
     
+    // Object context for method calls
+    uint64_t current_object_address; // Current object address for field access
+    
     // Debug information
     bool debug_mode;               // Debug output
     size_t instruction_count_executed; // Instructions executed
@@ -131,6 +134,7 @@ bool vm_instantiate_class(arx_vm_context_t *vm, uint64_t class_id, uint64_t *obj
 bool vm_get_field_offset(arx_vm_context_t *vm, uint64_t class_id, const char *field_name, uint64_t *offset);
 bool vm_get_method_offset(arx_vm_context_t *vm, uint64_t class_id, const char *method_name, uint64_t *offset);
 bool vm_access_field(arx_vm_context_t *vm, uint64_t object_address, uint64_t field_offset, uint64_t *value);
+bool vm_get_field(arx_vm_context_t *vm, uint64_t object_address, uint64_t field_offset, uint64_t *value);
 bool vm_set_field(arx_vm_context_t *vm, uint64_t object_address, uint64_t field_offset, uint64_t value);
 bool vm_call_method(arx_vm_context_t *vm, uint64_t object_address, uint64_t class_id, const char *method_name, uint64_t *return_value);
 

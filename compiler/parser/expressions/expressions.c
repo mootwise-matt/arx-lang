@@ -393,7 +393,9 @@ ast_node_t* parse_primary(parser_context_t *context)
             break;
             
         case TOK_STRING:
+            printf("PARSE_EXPRESSION: Found TOK_STRING, calling parse_string_literal\n");
             node = parse_string_literal(context);
+            printf("PARSE_EXPRESSION: parse_string_literal returned: %p\n", node);
             break;
             
         case TOK_IDENT:
@@ -520,9 +522,9 @@ ast_node_t* parse_number_literal(parser_context_t *context)
 
 ast_node_t* parse_string_literal(parser_context_t *context)
 {
-    if (debug_mode) {
-        printf("Parsing string literal: %.*s\n", (int)context->lexer->toklen, context->lexer->tokstart);
-    }
+    printf("PARSE_STRING_LITERAL: Parsing string literal: %.*s\n", (int)context->lexer->toklen, context->lexer->tokstart);
+    printf("PARSE_STRING_LITERAL: Token text: '%.*s', length: %d\n", 
+           (int)context->lexer->toklen, context->lexer->tokstart, (int)context->lexer->toklen);
     
     // Create AST node for string literal
     ast_node_t *node = ast_create_node(AST_LITERAL);
@@ -550,12 +552,8 @@ ast_node_t* parse_string_literal(parser_context_t *context)
         context->current_string_literal[context->lexer->toklen] = '\0';
     }
     
-    // Also collect the string literal for method-level collection
-    // This ensures string literals in expressions are available for code generation
-    if (!parser_collect_string_literal(context, context->current_string_literal)) {
-        if (node) ast_destroy_node(node);
-        return NULL;
-    }
+    // String literals will be collected by codegen during AST traversal
+    // No need to collect them here in the parser
     
     if (!advance_token(context)) {
         if (node) ast_destroy_node(node);
@@ -675,7 +673,7 @@ ast_node_t* parse_method_call_expression(parser_context_t *context, char *base_n
         printf("Parsing method call: %s.%s()\n", base_name, member_name ? member_name : "unknown");
     }
     
-    // Create method call AST node
+    // Create method call AST node (temporarily revert to AST_METHOD_CALL)
     ast_node_t *method_call = ast_create_node(AST_METHOD_CALL);
     if (!method_call) {
         free(base_name);

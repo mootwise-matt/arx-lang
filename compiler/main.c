@@ -224,7 +224,7 @@ void display_bytecode(instruction_t *instructions, size_t instruction_count)
                 case OPR_LEQ:     printf("LEQ"); break;
                 case OPR_GREATER: printf("GREATER"); break;
                 case OPR_GEQ:     printf("GEQ"); break;
-                case OPR_WRITELN: printf("WRITELN"); break;
+                // OPR_WRITELN removed - writeln is now accessed via system.writeln()
                 case OPR_OBJ_NEW: printf("OBJ_NEW"); break;
                 case OPR_OBJ_CALL_METHOD: printf("OBJ_CALL_METHOD"); break;
                 // Field opcodes removed - fields are accessed directly by name within class methods
@@ -290,6 +290,10 @@ bool compile_file(const char* input_file, const char* output_file)
         printf("Error: Failed to initialize parser\n");
         free(source);
         return false;
+    }
+    
+    if (debug_mode) {
+        printf("Parser initialized successfully\n");
     }
     
     // Initialize code generator

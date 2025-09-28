@@ -62,7 +62,7 @@ typedef enum
     OPR_OUTCHAR = 22,       // output character
     OPR_OUTINT  = 23,       // output integer
     OPR_OUTSTRING = 24,     // output string
-    OPR_WRITELN = 25,       // write line
+    // OPR_WRITELN removed - writeln is now accessed via system.writeln()
     OPR_INCHAR  = 26,       // input character
     OPR_ININT   = 27,       // input integer
     
@@ -84,6 +84,8 @@ typedef enum
     OPR_OBJ_CREATE = 40,    // Create object instance
     OPR_OBJ_CALL_METHOD = 41, // Call object method
     OPR_OBJ_RETURN = 42,    // Return from method
+    OPR_OBJ_GET_FIELD = 43, // Get object field value
+    OPR_OBJ_SET_FIELD = 44, // Set object field value
     OPR_OBJ_SELF = 45,      // Reference to self
     OPR_OBJ_NEW = 46,       // NEW operator
     OPR_OBJ_DOT = 47,       // Dot operator for field/method access

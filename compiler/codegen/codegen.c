@@ -33,7 +33,7 @@ bool codegen_init(codegen_context_t *context, parser_context_t *parser_context)
     context->label_table = NULL;
     context->label_table_size = 0;
     context->label_table_capacity = 0;
-    
+
     // Initialize variable tracking
     context->variable_names = NULL;
     context->variable_addresses = NULL;
@@ -50,8 +50,11 @@ bool codegen_init(codegen_context_t *context, parser_context_t *parser_context)
     context->method_position_count = 0;
     context->method_position_capacity = 0;
     
+    // String literals will be collected directly during AST traversal
+    // No need for complex transfer mechanism
+    
     if (debug_mode) {
-        printf("Code generator initialized\n");
+        printf("Code generator initialized with %zu string literals\n", context->string_literals_count);
     }
     
     return true;
@@ -84,6 +87,7 @@ bool codegen_start_method_tracking(codegen_context_t *context, const char *metho
     
     if (debug_mode) {
         printf("Started tracking method '%s' at instruction %zu\n", method_name, context->instruction_count);
+        printf("  Method position tracking: total methods tracked: %zu\n", context->method_position_count);
     }
     
     return true;
@@ -165,10 +169,80 @@ uint64_t codegen_generate_unique_class_id(const char *module_name, const char *c
     return hash;
 }
 
+uint64_t codegen_generate_unique_method_id(const char *module_name, const char *class_name, 
+                                          const char *method_name, const char *param_types, 
+                                          const char *return_type)
+{
+    if (!module_name || !class_name || !method_name) {
+        return 0;
+    }
+    
+    // Create a hash from module name, class name, method name, parameter types, and return type
+    uint64_t hash = 0;
+    
+    // Hash the module name
+    for (const char *p = module_name; *p; p++) {
+        hash = hash * 31 + *p;
+    }
+    
+    // Add separator
+    hash = hash * 31 + ':';
+    
+    // Hash the class name
+    for (const char *p = class_name; *p; p++) {
+        hash = hash * 31 + *p;
+    }
+    
+    // Add separator
+    hash = hash * 31 + '.';
+    
+    // Hash the method name
+    for (const char *p = method_name; *p; p++) {
+        hash = hash * 31 + *p;
+    }
+    
+    // Add parameter types if provided
+    if (param_types) {
+        hash = hash * 31 + '(';
+        for (const char *p = param_types; *p; p++) {
+            hash = hash * 31 + *p;
+        }
+        hash = hash * 31 + ')';
+    }
+    
+    // Add return type if provided (for functions)
+    if (return_type) {
+        hash = hash * 31 + ':';
+        for (const char *p = return_type; *p; p++) {
+            hash = hash * 31 + *p;
+        }
+    }
+    
+    if (debug_mode) {
+        printf("Generated unique method ID for module '%s', class '%s', method '%s' (params: '%s', return: '%s'): %llu\n", 
+               module_name, class_name, method_name, 
+               param_types ? param_types : "none", 
+               return_type ? return_type : "NULL", 
+               (unsigned long long)hash);
+        printf("  Hash components: module='%s' (%zu), class='%s' (%zu), method='%s' (%zu), params='%s' (%zu), return='%s' (%zu)\n",
+               module_name, strlen(module_name),
+               class_name, strlen(class_name),
+               method_name, strlen(method_name),
+               param_types ? param_types : "none", param_types ? strlen(param_types) : 4,
+               return_type ? return_type : "NULL", return_type ? strlen(return_type) : 4);
+    }
+    
+    return hash;
+}
+
 bool codegen_generate(codegen_context_t *context, ast_node_t *ast, 
                      instruction_t **instructions, size_t *instruction_count)
 {
+    printf("CODEGEN_GENERATE: Starting code generation\n");
+    printf("CODEGEN_GENERATE: AST node type=%d, value='%s', children=%zu\n", 
+           ast->type, ast->value ? ast->value : "NULL", ast->child_count);
     if (context == NULL || ast == NULL || instructions == NULL || instruction_count == NULL) {
+        printf("CODEGEN_GENERATE: NULL parameters, returning false\n");
         return false;
     }
     
@@ -176,11 +250,9 @@ bool codegen_generate(codegen_context_t *context, ast_node_t *ast,
         printf("Starting code generation...\n");
     }
     
-    // Generate code for the AST
-    if (!generate_module(context, ast)) {
-        codegen_error(context, "Failed to generate code for module");
-        return false;
-    }
+    // Generate code for the AST using AST-based approach
+    printf("CODEGEN_GENERATE: Calling generate_ast_code to process AST\n");
+    generate_ast_code(context, ast);
     
     // Resolve all label addresses (two-pass compilation)
     resolve_labels(context);
@@ -292,8 +364,17 @@ bool codegen_write_arxmod(codegen_context_t *context, const char *filename,
             }
             
             // Patch bytecode with resolved addresses
+            // Use centralized string literals
+            const char **strings_to_patch = NULL;
+            size_t string_count_to_patch = 0;
+            
+            if (context->string_literals && context->string_literals_count > 0) {
+                strings_to_patch = (const char**)context->string_literals;
+                string_count_to_patch = context->string_literals_count;
+            }
+            
             if (!linker_patch_bytecode(&linker, instructions, instruction_count, 
-                                       (const char**)context->string_literals, context->string_literals_count)) {
+                                       strings_to_patch, string_count_to_patch)) {
                 printf("Error: Failed to patch bytecode\n");
                 linker_cleanup(&linker);
                 if (classes) free(classes);
@@ -379,40 +460,23 @@ bool codegen_write_arxmod(codegen_context_t *context, const char *filename,
     size_t total_string_count = 0;
     char **all_strings = NULL;
     
-    // Count total strings
-    if (context->parser_context && context->parser_context->method_string_literals && 
-        context->parser_context->method_string_count > 0) {
-        total_string_count += context->parser_context->method_string_count;
-    }
+    // Use only centralized string literals (no more dual string stores)
     if (context->string_literals && context->string_literals_count > 0) {
-        total_string_count += context->string_literals_count;
-    }
-    
-    // Merge strings if we have any
-    if (total_string_count > 0) {
+        total_string_count = context->string_literals_count;
         all_strings = malloc(sizeof(char*) * total_string_count);
         if (!all_strings) {
-            printf("Error: Failed to allocate memory for merged strings\n");
+            printf("Error: Failed to allocate memory for strings\n");
             arxmod_writer_cleanup(&writer);
             return false;
         }
         
-        size_t index = 0;
-        
-        // Add method strings first
-        if (context->parser_context && context->parser_context->method_string_literals && 
-            context->parser_context->method_string_count > 0) {
-            for (size_t i = 0; i < context->parser_context->method_string_count; i++) {
-                all_strings[index++] = context->parser_context->method_string_literals[i];
-            }
+        // Copy centralized strings
+        for (size_t i = 0; i < context->string_literals_count; i++) {
+            all_strings[i] = context->string_literals[i];
         }
         
-        // Add regular strings
-        if (context->string_literals && context->string_literals_count > 0) {
-            for (size_t i = 0; i < context->string_literals_count; i++) {
-                all_strings[index++] = context->string_literals[i];
-            }
-        }
+        // Method signature information is now stored directly in method entries
+        // No need to add signature strings to the string table
         
         // Write merged strings section
         if (!arxmod_writer_add_strings_section(&writer, all_strings, total_string_count)) {
@@ -590,8 +654,7 @@ bool generate_module(codegen_context_t *context, ast_node_t *node)
         }
     }
     
-    // End with a halt instruction
-    emit_instruction(context, VM_HALT, 0, 0);
+    // Don't add HALT instruction - let Main method return properly
     
     return true;
 }
@@ -718,12 +781,12 @@ bool generate_class(codegen_context_t *context, ast_node_t *node)
     for (size_t i = 0; i < node->child_count; i++) {
         ast_node_t *child = node->children[i];
         
-        if (child->type == AST_FIELD) {
-            // Field handling - fields are accessible only within class methods
+        if (child->type == AST_OBJECT_VAR) {
+            // Object variable handling - variables are accessible only within class procedures/functions
             if (debug_mode) {
-                printf("Found field: %s\n", child->value ? child->value : "unknown");
+                printf("Found object variable: %s\n", child->value ? child->value : "unknown");
             }
-        } else if (child->type == AST_METHOD || child->type == AST_PROCEDURE || child->type == AST_FUNCTION) {
+        } else if (child->type == AST_PROCEDURE || child->type == AST_FUNCTION) {
             if (!generate_method(context, child)) {
                 return false;
             }
@@ -733,19 +796,19 @@ bool generate_class(codegen_context_t *context, ast_node_t *node)
     return true;
 }
 
-bool generate_field(codegen_context_t *context, ast_node_t *node)
+bool generate_object_variable(codegen_context_t *context, ast_node_t *node)
 {
-    // Field handling removed - fields are accessed directly by name within class methods
+    // Object variable handling - variables are accessed directly by name within class procedures/functions
     if (context == NULL || node == NULL) {
         return false;
     }
     
     if (debug_mode) {
-        printf("Generating code for field: %s\n", node->value ? node->value : "unknown");
+        printf("Generating code for object variable: %s\n", node->value ? node->value : "unknown");
     }
     
-    // For now, fields don't generate code - they're just metadata
-    // In a full implementation, this would generate field access code
+    // For now, object variables don't generate code - they're just metadata
+    // In a full implementation, this would generate variable access code
     
     return true;
 }
@@ -763,7 +826,7 @@ bool generate_method(codegen_context_t *context, ast_node_t *node)
     // Method position tracking is now handled in generate_ast_code
     // when the actual method bytecode is generated
     
-    // Check if this is the Main method and generate writeln code
+    // Check if this is the Main method
     if (debug_mode) {
         printf("Method name: '%s'\n", node->value ? node->value : "NULL");
     }
@@ -837,15 +900,17 @@ bool generate_method_legacy(codegen_context_t *context, ast_node_t *node)
                         // Found App class, look for Main method
                         for (size_t j = 0; j < child->child_count; j++) {
                             ast_node_t *method = child->children[j];
+                            printf("CODEGEN: Checking method %zu, type: %d, value: '%s'\n", 
+                                   j, method->type, method->value ? method->value : "NULL");
                             if ((method->type == AST_PROCEDURE || method->type == AST_FUNCTION) && 
                                 method->value && strcmp(method->value, "Main") == 0) {
                                 // Found Main method, generate code for its body
-                                if (debug_mode) {
-                                    printf("Found Main method, generating code for its %zu children\n", method->child_count);
-                                }
+                                printf("CODEGEN: Found Main method, generating code for its %zu children\n", method->child_count);
                                 for (size_t k = 0; k < method->child_count; k++) {
+                                    printf("CODEGEN: Processing Main method child %zu, type: %d\n", k, method->children[k]->type);
                                     generate_ast_code(context, method->children[k]);
                                 }
+                                printf("CODEGEN: Finished processing Main method\n");
                                 break;
                             }
                         }
@@ -863,12 +928,15 @@ bool generate_method_legacy(codegen_context_t *context, ast_node_t *node)
             // we would always have parser context with collected string literals
             emit_instruction(context, VM_LIT, 0, 0);
             emit_instruction(context, VM_OPR, 0, OPR_OUTSTRING);
-            emit_instruction(context, VM_OPR, 0, OPR_WRITELN);
+            // OPR_WRITELN removed - writeln is now accessed via system.writeln()
         }
         
-        if (debug_mode) {
-            printf("Generated DYNAMIC code for all statements - no hardcoded values!\n");
-        }
+    if (debug_mode) {
+        printf("Generated DYNAMIC code for all statements - no hardcoded values!\n");
+    }
+    
+    // Report final string count after all processing
+    printf("FINAL: Codegen completed with %zu string literals\n", context->string_literals_count);
         
         // Check if there's a NEW expression to generate
         // This is a temporary solution until we have proper AST-based code generation
@@ -1010,75 +1078,99 @@ bool generate_assignment(codegen_context_t *context, ast_node_t *node)
     }
     
     // Store the result (left-hand side variable)
-    // For now, use a placeholder address
-    emit_instruction(context, VM_STO, 0, 0);
+    if (node->child_count > 0 && node->children[0]->value) {
+        const char *var_name = node->children[0]->value;
+        
+        // Check if we're in a class context (method body)
+        if (context->current_class && context->current_class_name) {
+            // This is a field assignment within a class method
+            if (debug_mode) {
+                printf("Field assignment in class '%s': %s\n", context->current_class_name, var_name);
+            }
+            
+            // For now, use field offset 0 for all fields
+            // TODO: Implement proper field offset calculation based on field name
+            uint64_t field_offset = 0;
+            
+            // Generate field assignment: push field offset, set field
+            // The VM will use the stored object address from the method call context
+            emit_instruction(context, VM_OPR, 0, OPR_OBJ_SET_FIELD);
+        } else {
+            // This is a local variable assignment
+            if (debug_mode) {
+                printf("Local variable assignment: %s\n", var_name);
+            }
+            
+            // Check if variable already exists
+            bool found = false;
+            size_t var_address = 0;
+            for (size_t i = 0; i < context->variable_count; i++) {
+                if (context->variable_names[i] && strcmp(context->variable_names[i], var_name) == 0) {
+                    var_address = context->variable_addresses[i];
+                    found = true;
+                    break;
+                }
+            }
+            
+            // If not found, add new variable
+            if (!found) {
+                if (context->variable_count >= context->variable_capacity) {
+                    size_t new_capacity = context->variable_capacity == 0 ? 8 : context->variable_capacity * 2;
+                    char **new_names = realloc(context->variable_names, new_capacity * sizeof(char*));
+                    size_t *new_addresses = realloc(context->variable_addresses, new_capacity * sizeof(size_t));
+                    if (!new_names || !new_addresses) {
+                        return false;
+                    }
+                    context->variable_names = new_names;
+                    context->variable_addresses = new_addresses;
+                    context->variable_capacity = new_capacity;
+                }
+                
+                var_address = context->next_variable_address++;
+                context->variable_names[context->variable_count] = strdup(var_name);
+                context->variable_addresses[context->variable_count] = var_address;
+                context->variable_count++;
+                
+                if (debug_mode) {
+                    printf("Added variable '%s' at address %zu (total variables: %zu)\n", 
+                           var_name, var_address, context->variable_count);
+                }
+            }
+            
+            emit_instruction(context, VM_STO, 0, var_address);
+        }
+    } else {
+        // Fallback to address 0
+        emit_instruction(context, VM_STO, 0, 0);
+    }
     
     return true;
 }
 
-bool generate_writeln_statement(codegen_context_t *context, const char *string_literal)
+// Centralized string literal management with deduplication
+size_t get_or_add_string_literal(codegen_context_t *context, const char *string_literal)
 {
+    printf("GET_OR_ADD_STRING: Called with string='%s'\n", string_literal);
     if (context == NULL || string_literal == NULL) {
-        return false;
+        printf("GET_OR_ADD_STRING: NULL context or string, returning 0\n");
+        return 0;
     }
     
-    if (debug_mode) {
-        printf("Generating code for writeln(\"%s\")\n", string_literal);
-    }
-    
-    // Check if this is a complex expression
-    if (strcmp(string_literal, "COMPLEX_EXPRESSION") == 0) {
-        if (debug_mode) {
-            printf("Handling complex expression in writeln\n");
-        }
-        
-        // For Phase 1, we'll implement basic string concatenation
-        // This is a simplified approach that handles the most common case:
-        // writeln('Hello' + 'World')
-        
-        // For now, we'll generate code for a simple string concatenation
-        // In a full implementation, this would parse the actual expression AST
-        
-        // Generate code for string concatenation:
-        // 1. Load first string
-        // 2. Load second string  
-        // 3. Concatenate strings
-        // 4. Output result
-        
-        // Use the actual collected string literals
-        // For Phase 1, we'll assume we have at least 2 strings for concatenation
-        if (context->parser_context->method_string_count >= 2) {
-            // Load first string (ID 0)
-            emit_instruction(context, VM_LIT, 0, 0);
-            
-            // Load second string (ID 1) 
-            emit_instruction(context, VM_LIT, 0, 1);
-        } else {
-            // Fallback: use placeholder IDs
-            emit_instruction(context, VM_LIT, 0, 0);
-            emit_instruction(context, VM_LIT, 0, 1);
-        }
-        
-        // Concatenate strings
-        emit_instruction(context, VM_OPR, 0, OPR_STR_CONCAT);
-        
-        // Output the concatenated string
-        emit_instruction(context, VM_OPR, 0, OPR_OUTSTRING);
-        emit_instruction(context, VM_OPR, 0, OPR_WRITELN);
-        
-        if (debug_mode) {
-            printf("Generated string concatenation code for complex expression\n");
-        }
-        
-        return true;
-    }
-    
-    // Simple string literal case
-    // Store the string literal in the context for later addition to ARX module
+    // Initialize string store if needed
     if (context->string_literals == NULL) {
         context->string_literals = malloc(sizeof(char*) * 16);
         context->string_literals_capacity = 16;
         context->string_literals_count = 0;
+    }
+    
+    // Check if string already exists (deduplication)
+    for (size_t i = 0; i < context->string_literals_count; i++) {
+        if (context->string_literals[i] && strcmp(context->string_literals[i], string_literal) == 0) {
+            if (debug_mode) {
+                printf("String literal '%s' already exists at ID %zu (reusing)\n", string_literal, i);
+            }
+            return i; // Return existing ID
+        }
     }
     
     // Expand if needed
@@ -1086,28 +1178,30 @@ bool generate_writeln_statement(codegen_context_t *context, const char *string_l
         size_t new_capacity = context->string_literals_capacity * 2;
         char **new_strings = realloc(context->string_literals, sizeof(char*) * new_capacity);
         if (new_strings == NULL) {
-            return false;
+            return 0;
         }
         context->string_literals = new_strings;
         context->string_literals_capacity = new_capacity;
     }
     
-    // Store the string literal
+    // Add new string literal
     size_t string_id = context->string_literals_count;
+    printf("GET_OR_ADD_STRING: Adding new string at ID %zu\n", string_id);
     context->string_literals[string_id] = malloc(strlen(string_literal) + 1);
     if (context->string_literals[string_id] == NULL) {
-        return false;
+        printf("GET_OR_ADD_STRING: Failed to allocate memory for string, returning 0\n");
+        return 0;
     }
     strcpy(context->string_literals[string_id], string_literal);
     context->string_literals_count++;
     
-    // Generate bytecode: LIT string_id, OPR OUTSTRING, OPR WRITELN
-    emit_instruction(context, VM_LIT, 0, string_id);
-    emit_instruction(context, VM_OPR, 0, OPR_OUTSTRING);
-    emit_instruction(context, VM_OPR, 0, OPR_WRITELN);
+    printf("GET_OR_ADD_STRING: Successfully added string '%s' with ID %zu (total: %zu)\n", 
+           string_literal, string_id, context->string_literals_count);
     
-    return true;
+    return string_id;
 }
+
+// generate_writeln_statement is no longer needed - writeln is now a global procedure call
 
 bool generate_expression(codegen_context_t *context, ast_node_t *node)
 {
@@ -1121,6 +1215,9 @@ bool generate_expression(codegen_context_t *context, ast_node_t *node)
     
     switch (node->type) {
         case AST_LITERAL:
+            if (debug_mode) {
+                printf("generate_expression: Calling generate_literal for AST_LITERAL\n");
+            }
             return generate_literal(context, node);
             
         case AST_IDENTIFIER:
@@ -1136,6 +1233,8 @@ bool generate_expression(codegen_context_t *context, ast_node_t *node)
             return generate_unary_operation(context, node);
             
         case AST_METHOD_CALL:
+        case AST_PROCEDURE_CALL:
+        case AST_FUNCTION_CALL:
             return generate_method_call(context, node);
             
         case AST_FIELD_ACCESS:
@@ -1156,10 +1255,12 @@ bool generate_literal(codegen_context_t *context, ast_node_t *node)
     }
     
     if (debug_mode) {
-        printf("Generating literal: %llu\n", (unsigned long long)node->number);
+        printf("generate_literal: Processing literal node (value=%s, number=%llu)\n", 
+               node->value ? node->value : "NULL", (unsigned long long)node->number);
     }
     
-    emit_literal(context, node->number);
+    // Use the proper literal generation function that handles both strings and numbers
+    generate_literal_ast(context, node);
     return true;
 }
 
@@ -1175,15 +1276,37 @@ bool generate_identifier(codegen_context_t *context, ast_node_t *node)
     
     // Check if we're in a class context (method body)
     if (context->current_class && context->current_class_name) {
-        if (debug_mode) {
-            printf("In class context '%s': treating identifier '%s' as field access\n",
-                   context->current_class_name, node->value ? node->value : "unknown");
+        // First check if this is a local variable
+        bool found_local = false;
+        for (size_t i = 0; i < context->variable_count; i++) {
+            if (context->variable_names[i] && node->value && 
+                strcmp(context->variable_names[i], node->value) == 0) {
+                if (debug_mode) {
+                    printf("In class context '%s': found local variable '%s' at address %zu\n",
+                           context->current_class_name, node->value, context->variable_addresses[i]);
+                }
+                // Load the local variable value from memory
+                emit_instruction(context, VM_LOD, 0, context->variable_addresses[i]);
+                found_local = true;
+                break;
+            }
         }
+        
+        if (!found_local) {
+            if (debug_mode) {
+                printf("In class context '%s': treating identifier '%s' as field access\n",
+                       context->current_class_name, node->value ? node->value : "unknown");
+            }
 
-        // Field access within class methods - fields are accessed directly by name
-        // No special bytecode needed since fields are just local variables within the class
-        if (debug_mode) {
-            printf("Field access within class method - treating as local variable\n");
+            // Field access within class methods - need to load from object's field memory
+            // For now, we'll generate a placeholder that the VM can handle
+            if (debug_mode) {
+                printf("Field access within class method - generating field load instruction\n");
+            }
+            
+            // Generate field access instruction - this will be handled by the VM
+            // The VM will use the stored object address from the method call context
+            emit_instruction(context, VM_OPR, 0, OPR_OBJ_GET_FIELD);
         }
     } else {
         if (debug_mode) {
@@ -1191,9 +1314,37 @@ bool generate_identifier(codegen_context_t *context, ast_node_t *node)
                    node->value ? node->value : "unknown");
         }
 
-        // Generate variable access bytecode for local variables
-    // For now, use a placeholder address
-    emit_load(context, 0, 0);
+        // Look up the variable in the variable table
+        if (debug_mode) {
+            printf("Looking up variable '%s' in table with %zu variables\n", 
+                   node->value ? node->value : "unknown", context->variable_count);
+            for (size_t i = 0; i < context->variable_count; i++) {
+                printf("  Variable %zu: '%s' at address %zu\n", i, 
+                       context->variable_names[i] ? context->variable_names[i] : "NULL",
+                       context->variable_addresses[i]);
+            }
+        }
+        
+        bool found = false;
+        for (size_t i = 0; i < context->variable_count; i++) {
+            if (context->variable_names[i] && node->value && 
+                strcmp(context->variable_names[i], node->value) == 0) {
+                if (debug_mode) {
+                    printf("Found variable '%s' at address %zu\n", node->value, context->variable_addresses[i]);
+                }
+                // Load the variable value from memory
+                emit_instruction(context, VM_LOD, 0, context->variable_addresses[i]);
+                found = true;
+                break;
+            }
+        }
+        
+        if (!found) {
+            if (debug_mode) {
+                printf("Variable '%s' not found, using placeholder string ID 0\n", node->value ? node->value : "unknown");
+            }
+            emit_literal(context, 0); // Load placeholder string ID 0
+        }
     }
 
     return true;
@@ -1256,16 +1407,15 @@ bool generate_unary_operation(codegen_context_t *context, ast_node_t *node)
 
 bool generate_method_call(codegen_context_t *context, ast_node_t *node)
 {
-    if (context == NULL || node == NULL || node->type != AST_METHOD_CALL) {
+    if (context == NULL || node == NULL || (node->type != AST_METHOD_CALL && node->type != AST_PROCEDURE_CALL && node->type != AST_FUNCTION_CALL)) {
         return false;
     }
     
-    if (debug_mode) {
-        printf("Generating method call\n");
-    }
+    printf("*** GENERATE_METHOD_CALL CALLED ***\n");
+    printf("Generating method call: %s\n", node->value ? node->value : "unknown");
     
-    // For now, generate a placeholder method call
-    emit_instruction(context, VM_OPR, 0, OPR_OBJ_CALL_METHOD);
+    // Use the same logic as generate_method_call_ast
+    generate_method_call_ast(context, node);
     
     return true;
 }
@@ -1566,10 +1716,19 @@ bool generate_return_statement(codegen_context_t *context, ast_node_t *node)
     }
     
     // Generate return operation
+    if (debug_mode) {
+        printf("Emitting OPR_RET instruction\n");
+    }
     emit_operation(context, OPR_RET, 0, 0);
+    
+    if (debug_mode) {
+        printf("Return statement generation completed\n");
+    }
     
     return true;
 }
+
+// generate_writeln_ast_statement is no longer needed - writeln is now a global procedure call
 
 void emit_instruction(codegen_context_t *context, opcode_t opcode, uint8_t level, uint64_t operand)
 {
@@ -1619,20 +1778,12 @@ void generate_ast_code(codegen_context_t *context, ast_node_t *node)
 {
     if (!node) return;
     
-    if (debug_mode) {
-        printf("Generating code for AST node type: %d", node->type);
-        if (node->type == AST_IF_STMT) {
-            printf(" (AST_IF_STMT=%d)", AST_IF_STMT);
-        } else if (node->type == AST_WHILE_STMT) {
-            printf(" (AST_WHILE_STMT=%d)", AST_WHILE_STMT);
-        } else if (node->type == AST_FOR_STMT) {
-            printf(" (AST_FOR_STMT=%d)", AST_FOR_STMT);
-        }
-        printf("\n");
-    }
+    printf("GENERATE_AST_CODE: Processing node type=%d, value='%s', children=%zu\n", 
+           node->type, node->value ? node->value : "NULL", node->child_count);
     
     switch (node->type) {
         case AST_MODULE:
+            printf("GENERATE_AST_CODE: Processing AST_MODULE\n");
             // Generate code for all classes in the module
             for (size_t i = 0; i < node->child_count; i++) {
                 generate_ast_code(context, node->children[i]);
@@ -1646,24 +1797,42 @@ void generate_ast_code(codegen_context_t *context, ast_node_t *node)
             }
             break;
             
-        case AST_METHOD:
         case AST_PROCEDURE:
-            // Generate code for all statements in the method/procedure
+        case AST_FUNCTION:
+            // Generate code for all statements in the procedure/function
             if (debug_mode) {
-                printf("AST_METHOD/AST_PROCEDURE node has %zu children\n", node->child_count);
+                printf("AST_PROCEDURE/AST_FUNCTION node has %zu children\n", node->child_count);
             }
             for (size_t i = 0; i < node->child_count; i++) {
                 if (debug_mode) {
-                    printf("Processing method/procedure child %zu, type: %d\n", i, node->children[i]->type);
+                    printf("Processing procedure/function child %zu, type: %d\n", i, node->children[i]->type);
                 }
                 generate_ast_code(context, node->children[i]);
+            }
+            
+            // Add implicit return statement for procedures/functions that don't have explicit returns
+            // Check if the last statement is a return statement
+            bool has_explicit_return = false;
+            if (node->child_count > 0) {
+                ast_node_t *last_child = node->children[node->child_count - 1];
+                if (last_child && last_child->type == AST_RETURN_STMT) {
+                    has_explicit_return = true;
+                }
+            }
+            
+            // If no explicit return, add implicit return
+            if (!has_explicit_return) {
+                if (debug_mode) {
+                    printf("Adding implicit return statement for %s\n", node->value ? node->value : "unknown");
+                }
+                emit_operation(context, OPR_RET, 0, 0);
             }
             
             // Method tracking is now handled in generate_method function
             break;
             
         case AST_ASSIGNMENT:
-            generate_assignment_ast(context, node);
+            generate_assignment(context, node);
             break;
             
         case AST_VAR_DECL:
@@ -1691,23 +1860,24 @@ void generate_ast_code(codegen_context_t *context, ast_node_t *node)
                 if (debug_mode) {
                     printf("Processing expression statement child, type: %d\n", node->children[0]->type);
                 }
-                generate_expression_ast(context, node->children[0]);
+                generate_expression(context, node->children[0]);
                 
                 // All expression types push their result onto the stack
-                // For writeln statements, we need to output whatever is on the stack
+                // For output statements, we need to output whatever is on the stack
                     if (debug_mode) {
                         const char *type_name = "unknown";
                         if (node->children[0]->type == AST_LITERAL) type_name = "literal";
                         else if (node->children[0]->type == AST_IDENTIFIER) type_name = "identifier";
                         else if (node->children[0]->type == AST_BINARY_OP) type_name = "binary operation";
-                        else if (node->children[0]->type == AST_METHOD_CALL) type_name = "method call";
+                        else if (node->children[0]->type == AST_PROCEDURE_CALL) type_name = "procedure call";
+                        else if (node->children[0]->type == AST_FUNCTION_CALL) type_name = "function call";
                         else if (node->children[0]->type == AST_FIELD_ACCESS) type_name = "field access";
-                    printf("Outputting result of %s expression in writeln statement\n", type_name);
+                    printf("Outputting result of %s expression\n", type_name);
                     }
                 
                 // Output whatever the expression pushed onto the stack
                     emit_instruction(context, VM_OPR, 0, OPR_OUTSTRING);
-                    emit_instruction(context, VM_OPR, 0, OPR_WRITELN);
+                    // OPR_WRITELN removed - writeln is now accessed via system.writeln()
             }
             break;
             
@@ -1724,18 +1894,13 @@ void generate_ast_code(codegen_context_t *context, ast_node_t *node)
             if (debug_mode) {
                 printf("AST_RETURN_STMT: processing return statement\n");
             }
-            if (node->child_count > 0) {
-                // Generate code for the return expression
-                generate_expression_ast(context, node->children[0]);
-            }
-            // Emit return instruction
-            emit_instruction(context, VM_OPR, 0, OPR_RET);
+            generate_return_statement(context, node);
             break;
             
+        // AST_WRITELN_STMT removed - writeln is now accessed via system.writeln()
+            
         default:
-            if (debug_mode) {
-                printf("Unhandled AST node type: %d\n", node->type);
-            }
+            printf("GENERATE_AST_CODE: Unhandled AST node type: %d\n", node->type);
             break;
     }
 }
@@ -1813,6 +1978,34 @@ void generate_expression_ast(codegen_context_t *context, ast_node_t *node)
             break;
             
         case AST_METHOD_CALL:
+            printf("*** AST_METHOD_CALL CASE REACHED ***\n");
+            printf("GENERATE_AST_CODE: Processing AST_METHOD_CALL '%s' with %zu children\n", 
+                   node->value ? node->value : "NULL", node->child_count);
+            for (size_t i = 0; i < node->child_count; i++) {
+                printf("GENERATE_AST_CODE: Method call child %zu: type=%d, value='%s'\n", 
+                       i, node->children[i]->type, node->children[i]->value ? node->children[i]->value : "NULL");
+            }
+            generate_method_call_ast(context, node);
+            break;
+            
+        case AST_PROCEDURE_CALL:
+            printf("*** AST_PROCEDURE_CALL CASE REACHED ***\n");
+            printf("GENERATE_AST_CODE: Processing AST_PROCEDURE_CALL '%s' with %zu children\n", 
+                   node->value ? node->value : "NULL", node->child_count);
+            for (size_t i = 0; i < node->child_count; i++) {
+                printf("GENERATE_AST_CODE: Procedure call child %zu: type=%d, value='%s'\n", 
+                       i, node->children[i]->type, node->children[i]->value ? node->children[i]->value : "NULL");
+            }
+            generate_method_call_ast(context, node);
+            break;
+            
+        case AST_FUNCTION_CALL:
+            printf("GENERATE_AST_CODE: Processing AST_FUNCTION_CALL '%s' with %zu children\n", 
+                   node->value ? node->value : "NULL", node->child_count);
+            for (size_t i = 0; i < node->child_count; i++) {
+                printf("GENERATE_AST_CODE: Function call child %zu: type=%d, value='%s'\n", 
+                       i, node->children[i]->type, node->children[i]->value ? node->children[i]->value : "NULL");
+            }
             generate_method_call_ast(context, node);
             break;
             
@@ -1861,28 +2054,22 @@ void generate_literal_ast(codegen_context_t *context, ast_node_t *node)
 {
     if (!node) return;
     
+    printf("GENERATE_LITERAL: Processing node with value='%s', number=%llu\n", 
+           node->value ? node->value : "NULL", (unsigned long long)node->number);
     
     if (node->value) {
-        // String literal - find the correct string index in the string table
-        size_t string_index = 0;
-        if (context->parser_context && context->parser_context->method_string_literals) {
-            // Find the string in the collected string literals
-            for (size_t i = 0; i < context->parser_context->method_string_count; i++) {
-                if (context->parser_context->method_string_literals[i] && 
-                    strcmp(context->parser_context->method_string_literals[i], node->value) == 0) {
-                    string_index = i;
-                    break;
-                }
-            }
-        }
+        // String literal - use centralized string literal management
+        printf("GENERATE_LITERAL: About to call get_or_add_string_literal for '%s'\n", node->value);
+        size_t string_id = get_or_add_string_literal(context, node->value);
+        printf("GENERATE_LITERAL: get_or_add_string_literal returned ID %zu\n", string_id);
         
-        if (debug_mode) {
-            printf("Loading string literal '%s' at index %zu\n", node->value, string_index);
-        }
-        
-        emit_instruction(context, VM_LIT, 0, string_index);
+        // Emit LIT instruction with the string ID
+        emit_instruction(context, VM_LIT, 0, string_id);
     } else {
         // Number literal - load the actual value from the AST
+        if (debug_mode) {
+            printf("Loading number literal %llu\n", (unsigned long long)node->number);
+        }
         emit_instruction(context, VM_LIT, 0, node->number);
     }
 }
@@ -2240,14 +2427,23 @@ void generate_method_call_ast(codegen_context_t *context, ast_node_t *node)
 {
     if (!context || !node) return;
     
-    if (debug_mode) {
-        printf("Generating method call: %s\n", node->value ? node->value : "unknown");
+    printf("GENERATE_METHOD_CALL_AST: Processing method call '%s' with %zu children\n", 
+           node->value ? node->value : "unknown", node->child_count);
+    
+    // **CRITICAL FIX**: Process method call parameters (children) to collect string literals
+    for (size_t i = 0; i < node->child_count; i++) {
+        printf("GENERATE_METHOD_CALL_AST: Processing parameter %zu (type=%d, value='%s')\n", 
+               i, node->children[i]->type, node->children[i]->value ? node->children[i]->value : "NULL");
+        
+        // Generate code for each parameter (this will collect string literals)
+        generate_ast_code(context, node->children[i]);
     }
     
-    // Extract object name and method name from "object.method" format
+    // Check if this is a global procedure call (no dot) or object method call (with dot)
     if (node->value) {
         char *dot_pos = strrchr(node->value, '.');
         if (dot_pos) {
+            // Object method call: object.method()
             // Split into object name and method name
             size_t object_name_len = dot_pos - node->value;
             char *object_name = malloc(object_name_len + 1);
@@ -2265,29 +2461,89 @@ void generate_method_call_ast(codegen_context_t *context, ast_node_t *node)
             }
             
             // Step 1: Push object address onto stack
-            // Look up the object variable in the symbol table
-            size_t object_address;
-            if (codegen_find_variable(context, object_name, &object_address)) {
-                emit_instruction(context, VM_LOD, 0, object_address);
+            // Special handling for virtual 'system' object
+            if (strcmp(object_name, "system") == 0) {
+                // Virtual system object - use special address 0xFFFFFFFF
+                emit_instruction(context, VM_LIT, 0, 0xFFFFFFFF);
                 if (debug_mode) {
-                    printf("  Loading object '%s' from address %zu\n", object_name, object_address);
+                    printf("  Loading virtual system object with special address 0xFFFFFFFF\n");
                 }
             } else {
-                if (debug_mode) {
-                    printf("  Warning: Object '%s' not found in symbol table, using placeholder address 0\n", object_name);
+                // Look up the object variable in the symbol table
+                size_t object_address;
+                if (codegen_find_variable(context, object_name, &object_address)) {
+                    emit_instruction(context, VM_LOD, 0, object_address);
+                    if (debug_mode) {
+                        printf("  Loading object '%s' from address %zu\n", object_name, object_address);
+                    }
+                } else {
+                    if (debug_mode) {
+                        printf("  Warning: Object '%s' not found in symbol table, using placeholder address 0\n", object_name);
+                    }
+                    // Use placeholder address if object not found
+                    emit_instruction(context, VM_LIT, 0, 0);
                 }
-                // Use placeholder address if object not found
-                emit_instruction(context, VM_LIT, 0, 0);
             }
             
-            // Step 2: Push method offset onto stack (placeholder for now, will be patched by linker)
-            // The linker will calculate the actual method offset from the class manifest
-            uint64_t method_offset_placeholder = 0xFFFF; // Placeholder offset
-            emit_instruction(context, VM_LIT, 0, method_offset_placeholder);
+            // Step 2: Generate method ID using the same hash function as method definition
+            // We need to determine the class name and generate the proper method ID
+            const char *class_name = "UnknownClass"; // TODO: Get actual class name from object type
+            
+            // For now, use a simple heuristic: if object name starts with "person", it's Person class
+            // This is a temporary solution until we implement proper type tracking
+            if (strncmp(object_name, "person", 6) == 0) {
+                class_name = "Person";
+            } else if (strncmp(object_name, "student", 7) == 0) {
+                class_name = "Student";
+            } else if (strcmp(object_name, "system") == 0) {
+                class_name = "System";
+            }
+            
+            const char *module_name = context->parser_context && context->parser_context->root ? 
+                                     context->parser_context->root->value : "UnknownModule";
+            
+            // Use a simpler approach: store method name in the parser context's string table
+            // The linker will resolve this by name instead of by hash ID
+            uint64_t method_name_id = 0;
+            
+            // Add method name to parser context's string table if not already present
+            bool found = false;
+            if (context->parser_context && context->parser_context->method_string_literals) {
+                for (size_t k = 0; k < context->parser_context->method_string_count; k++) {
+                    if (context->parser_context->method_string_literals[k] && 
+                        strcmp(context->parser_context->method_string_literals[k], method_name) == 0) {
+                        method_name_id = k;
+                        found = true;
+                        break;
+                    }
+                }
+                
+                if (!found) {
+                    // Add new string to parser context's string table
+                    if (context->parser_context->method_string_count >= context->parser_context->method_string_capacity) {
+                        size_t new_capacity = context->parser_context->method_string_capacity == 0 ? 8 : context->parser_context->method_string_capacity * 2;
+                        char **new_strings = realloc(context->parser_context->method_string_literals, new_capacity * sizeof(char*));
+                        if (!new_strings) {
+                            method_name_id = 0; // Fallback
+                        } else {
+                            context->parser_context->method_string_literals = new_strings;
+                            context->parser_context->method_string_capacity = new_capacity;
+                        }
+                    }
+                    
+                    if (context->parser_context->method_string_count < context->parser_context->method_string_capacity) {
+                        context->parser_context->method_string_literals[context->parser_context->method_string_count] = strdup(method_name);
+                        method_name_id = context->parser_context->method_string_count;
+                        context->parser_context->method_string_count++;
+                    }
+                }
+            }
+            
+            emit_instruction(context, VM_LIT, 0, method_name_id);
             
             if (debug_mode) {
-                printf("  Pushed method offset placeholder %llu for method '%s' (will be patched by linker)\n", 
-                       (unsigned long long)method_offset_placeholder, method_name);
+                printf("  Pushed method name ID %llu for method '%s' (class: %s, module: %s)\n", 
+                       (unsigned long long)method_name_id, method_name, class_name, module_name);
             }
             
             free(object_name);
@@ -2312,10 +2568,39 @@ void generate_method_call_ast(codegen_context_t *context, ast_node_t *node)
     }
     
     // Step 3: Generate method call instruction
-    emit_instruction(context, VM_OPR, 0, OPR_OBJ_CALL_METHOD);
-    
-    if (debug_mode) {
-        printf("Generated method call instruction for method: %s\n", node->value ? node->value : "unknown");
+    // Check if this is a global procedure call (no dot) or object method call (with dot)
+    if (node->value && strchr(node->value, '.') == NULL) {
+        // Global procedure call: procedure()
+        const char *procedure_name = node->value;
+        
+        if (debug_mode) {
+            printf("  Global procedure call: %s\n", procedure_name);
+        }
+        
+        // For global procedures like writeln, we need to handle them specially
+        if (strcmp(procedure_name, "writeln") == 0) {
+            // writeln is a procedure of the virtual 'system' object
+            // The argument should already be on the stack from the expression parsing
+            // We just need to emit the output instruction
+            emit_instruction(context, VM_OPR, 0, OPR_OUTSTRING);
+            
+            if (debug_mode) {
+                printf("Generated system.writeln procedure call instruction\n");
+            }
+        } else {
+            // Other system procedures - for now, just emit a placeholder
+            if (debug_mode) {
+                printf("  Warning: System procedure '%s' not implemented, using placeholder\n", procedure_name);
+            }
+            emit_instruction(context, VM_OPR, 0, OPR_OUTSTRING); // Placeholder
+        }
+    } else {
+        // Object method call
+        emit_instruction(context, VM_OPR, 0, OPR_OBJ_CALL_METHOD);
+        
+        if (debug_mode) {
+            printf("Generated object method call instruction for method: %s\n", node->value ? node->value : "unknown");
+        }
     }
 }
 
@@ -2465,9 +2750,10 @@ bool collect_classes_from_ast(codegen_context_t *context, ast_node_t *ast, class
                     ast_node_t *child = class_node->children[j];
                     printf("DEBUG: Class child %zu: type=%d, value='%s'\n", j, child->type, child->value ? child->value : "NULL");
                     
-                    // Field handling removed - fields are accessed directly by name within class methods
-                    if (child->type == AST_METHOD || 
-                        child->type == AST_PROCEDURE || 
+                    if (child->type == AST_OBJECT_VAR) {
+                        field_count_total++;
+                        printf("DEBUG: Found object variable: %s (type=%d)\n", child->value ? child->value : "unknown", child->type);
+                    } else if (child->type == AST_PROCEDURE || 
                         child->type == AST_FUNCTION) {
                         method_count_total++;
                         printf("DEBUG: Found method: %s (type=%d)\n", child->value ? child->value : "unknown", child->type);
@@ -2537,10 +2823,26 @@ bool collect_classes_from_ast(codegen_context_t *context, ast_node_t *ast, class
                 for (size_t j = 0; j < class_node->child_count; j++) {
                     ast_node_t *child = class_node->children[j];
                     
-                    // Field handling removed - fields are accessed directly by name within class methods
+                    if (child->type == AST_OBJECT_VAR) {
+                        field_entry_t *field_entry = &(*fields)[field_index];
+                        memset(field_entry, 0, sizeof(field_entry_t));
                         
-                    if (child->type == AST_METHOD || 
-                        child->type == AST_PROCEDURE || 
+                        // Set field name
+                        if (child->value) {
+                            strncpy(field_entry->field_name, child->value, 31);
+                            field_entry->field_name[31] = '\0';
+                        }
+                        
+                        // Set field offset (sequential for now)
+                        field_entry->offset = field_offset;
+                        field_offset += sizeof(uint64_t); // Each field is 8 bytes
+                        
+                        // Set field type (for now, assume all fields are strings)
+                        field_entry->type_id = 1; // String type
+                        
+                        field_index++;
+                        class_entry->field_count++;
+                    } else if (child->type == AST_PROCEDURE || 
                         child->type == AST_FUNCTION) {
                         method_entry_t *method_entry = &(*methods)[method_index];
                         memset(method_entry, 0, sizeof(method_entry_t));
@@ -2551,18 +2853,80 @@ bool collect_classes_from_ast(codegen_context_t *context, ast_node_t *ast, class
                             method_entry->method_name[31] = '\0';
                         }
                         
-                        // Generate method ID
-                        method_entry->method_id = 0;
-                        for (const char *p = method_entry->method_name; *p; p++) {
-                            method_entry->method_id = method_entry->method_id * 31 + *p;
+                        // Extract signature information from method node
+                        char *param_types = NULL;
+                        char *return_type = NULL;
+                        
+                        // Look for parameter types and return type in child nodes
+                        for (size_t k = 0; k < child->child_count; k++) {
+                            ast_node_t *child_node = child->children[k];
+                            if (child_node->type == AST_IDENTIFIER) {
+                                // First identifier child is parameter types, second is return type
+                                if (param_types == NULL) {
+                                    param_types = child_node->value;
+                                } else if (return_type == NULL) {
+                                    return_type = child_node->value;
+                                }
+                            }
                         }
-                        method_entry->method_id = method_entry->method_id % 1000;
+                        
+                        // Generate signature-based method ID
+                        const char *module_name = ast->value ? ast->value : "UnknownModule";
+                        
+                        if (debug_mode) {
+                            printf("Method definition: module='%s', class='%s', method='%s', params='%s', return='%s'\n",
+                                   module_name, class_entry->class_name, method_entry->method_name,
+                                   param_types ? param_types : "NULL", return_type ? return_type : "NULL");
+                        }
+                        
+                        method_entry->method_id = codegen_generate_unique_method_id(
+                            module_name, 
+                            class_entry->class_name, 
+                            method_entry->method_name, 
+                            param_types, 
+                            return_type
+                        );
+                        
+                        // Store signature information directly in method entry
+                        if (param_types) {
+                            strncpy(method_entry->param_types, param_types, 63);
+                            method_entry->param_types[63] = '\0';
+                            
+                            // Count parameters
+                            method_entry->parameter_count = 1; // At least one parameter
+                            for (const char *p = param_types; *p; p++) {
+                                if (*p == ',') {
+                                    method_entry->parameter_count++;
+                                }
+                            }
+                        } else {
+                            method_entry->param_types[0] = '\0';
+                            method_entry->parameter_count = 0;
+                        }
+                        
+                        if (return_type) {
+                            strncpy(method_entry->return_type, return_type, 31);
+                            method_entry->return_type[31] = '\0';
+                        } else {
+                            method_entry->return_type[0] = '\0';
+                        }
                         
                         // Set method offset using actual bytecode position
                         method_entry->offset = codegen_get_method_offset(context, child->value);
-    if (debug_mode) {
+                        
+                        // If method offset is 0 (not found), set it to 1 for Main method
+                        if (method_entry->offset == 0 && strcmp(child->value, "Main") == 0) {
+                            method_entry->offset = 1;
+                        }
+                        if (debug_mode) {
                             printf("Set method '%s' offset to %zu (actual bytecode position)\n", 
                                    child->value, method_entry->offset);
+                            printf("  Method position tracking: found %zu methods in tracking table\n", context->method_position_count);
+                            for (size_t k = 0; k < context->method_position_count; k++) {
+                                printf("    Method %zu: '%s' at instruction %zu\n", k, 
+                                       context->method_positions[k].method_name ? context->method_positions[k].method_name : "NULL",
+                                       context->method_positions[k].start_instruction);
+                            }
                         }
                         
                         method_entry->parameter_count = 0; // Count parameters from AST

@@ -5,7 +5,7 @@ module ArithmeticDemo;
 class App
   procedure Main
   begin
-    writeln('=== ARX Arithmetic Operations Demo ===');
+    system.system.writeln('=== ARX Arithmetic Operations Demo ===');
     
     // Basic arithmetic operations
     integer a;
@@ -18,45 +18,45 @@ class App
     
     // Addition
     result = a + b;
-    writeln('Addition: ' + a + ' + ' + b + ' = ' + result);
+    system.writeln('Addition: ' + a + ' + ' + b + ' = ' + result);
     
     // Subtraction
     result = a - b;
-    writeln('Subtraction: ' + a + ' - ' + b + ' = ' + result);
+    system.writeln('Subtraction: ' + a + ' - ' + b + ' = ' + result);
     
     // Multiplication
     result = a * b;
-    writeln('Multiplication: ' + a + ' * ' + b + ' = ' + result);
+    system.writeln('Multiplication: ' + a + ' * ' + b + ' = ' + result);
     
     // Division
     result = a / b;
-    writeln('Division: ' + a + ' / ' + b + ' = ' + result);
+    system.writeln('Division: ' + a + ' / ' + b + ' = ' + result);
     
     // Modulo
     result = a % c;
-    writeln('Modulo: ' + a + ' % ' + c + ' = ' + result);
+    system.writeln('Modulo: ' + a + ' % ' + c + ' = ' + result);
     
     // Exponentiation
     result = a ^ c;
-    writeln('Exponentiation: ' + a + ' ^ ' + c + ' = ' + result);
+    system.writeln('Exponentiation: ' + a + ' ^ ' + c + ' = ' + result);
     
-    writeln('');
+    system.writeln('');
     
     // Complex expressions with operator precedence
-    writeln('=== Complex Expressions ===');
+    system.writeln('=== Complex Expressions ===');
     
     // Parentheses control precedence
     result = (a + b) * c;
-    writeln('With parentheses: (' + a + ' + ' + b + ') * ' + c + ' = ' + result);
+    system.writeln('With parentheses: (' + a + ' + ' + b + ') * ' + c + ' = ' + result);
     
     // Without parentheses (multiplication first)
     result = a + b * c;
-    writeln('Without parentheses: ' + a + ' + ' + b + ' * ' + c + ' = ' + result);
+    system.writeln('Without parentheses: ' + a + ' + ' + b + ' * ' + c + ' = ' + result);
     
     // Multiple operations
     result = (2000 * 3) / 4;
-    writeln('Complex calculation: (2000 * 3) / 4 = ' + result);
+    system.writeln('Complex calculation: (2000 * 3) / 4 = ' + result);
     
-    writeln('=== Arithmetic Demo Complete ===');
+    system.writeln('=== Arithmetic Demo Complete ===');
   end;
 end;

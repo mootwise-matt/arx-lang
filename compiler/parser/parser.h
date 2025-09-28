@@ -31,7 +31,7 @@ ast_node_t* parse_statement_ast(parser_context_t *context);
 ast_node_t* parse_assignment_statement(parser_context_t *context);
 ast_node_t* parse_assignment_statement_with_var(parser_context_t *context, const char *var_name);
 ast_node_t* parse_variable_declaration(parser_context_t *context);
-ast_node_t* parse_writeln_statement(parser_context_t *context);
+// parse_writeln_statement removed - writeln is now accessed via system.writeln()
 ast_node_t* parse_expression(parser_context_t *context);
 ast_node_t* parse_logical_or(parser_context_t *context);
 bool parse_logical_and(parser_context_t *context);

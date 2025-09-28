@@ -45,7 +45,7 @@ static const keyword_entry_t keywords[] = {
     {"string", TOK_STRING},
     {"of", TOK_OF},
     {"array", TOK_ARRAY},
-    {"writeln", TOK_WRITELN},
+    // writeln is now a procedure of the virtual 'system' object
     {"class", TOK_CLASS},
     {"extends", TOK_EXTENDS},
     {"new", TOK_NEW},
@@ -69,6 +69,7 @@ static const keyword_entry_t keywords[] = {
 bool lexer_init(lexer_context_t *context, char *source, size_t source_len)
 {
     if (context == NULL || source == NULL) {
+        printf("DEBUG: lexer_init failed - context=%p, source=%p\n", context, source);
         return false;
     }
     
@@ -508,7 +509,7 @@ const char* token_to_string(token_t token)
         case TOK_STRING: return "STRING";
         case TOK_OF: return "OF";
         case TOK_ARRAY: return "ARRAY";
-        case TOK_WRITELN: return "WRITELN";
+        // TOK_WRITELN removed - writeln is now accessed via system.writeln()
         case TOK_CLASS: return "CLASS";
         case TOK_EXTENDS: return "EXTENDS";
         case TOK_NEW: return "NEW";

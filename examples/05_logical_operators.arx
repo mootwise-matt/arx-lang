@@ -3,8 +3,8 @@ module LogicalOperators;
 class App
   procedure Main
   begin
-    writeln('=== ARX Logical Operators Demo ===');
-    writeln('');
+    system.writeln('=== ARX Logical Operators Demo ===');
+    system.writeln('');
     
     // Test variables
     integer a;
@@ -16,76 +16,76 @@ class App
     b = 10;
     c = 0;
     
-    writeln('Variables: a = ' + a + ', b = ' + b + ', c = ' + c);
-    writeln('');
+    system.writeln('Variables: a = ' + a + ', b = ' + b + ', c = ' + c);
+    system.writeln('');
     
     // Test Logical AND (&&)
-    writeln('=== Logical AND (&&) Tests ===');
+    system.writeln('=== Logical AND (&&) Tests ===');
     
     result = a > 0 && b > 0;
-    writeln('a > 0 && b > 0 = ' + result + ' (should be 1)');
+    system.writeln('a > 0 && b > 0 = ' + result + ' (should be 1)');
     
     result = a > 0 && c > 0;
-    writeln('a > 0 && c > 0 = ' + result + ' (should be 0)');
+    system.writeln('a > 0 && c > 0 = ' + result + ' (should be 0)');
     
     result = a > 10 && b > 5;
-    writeln('a > 10 && b > 5 = ' + result + ' (should be 0)');
+    system.writeln('a > 10 && b > 5 = ' + result + ' (should be 0)');
     
     result = a == 5 && b == 10;
-    writeln('a == 5 && b == 10 = ' + result + ' (should be 1)');
+    system.writeln('a == 5 && b == 10 = ' + result + ' (should be 1)');
     
-    writeln('');
+    system.writeln('');
     
     // Test Logical OR (||)
-    writeln('=== Logical OR (||) Tests ===');
+    system.writeln('=== Logical OR (||) Tests ===');
     
     result = a > 0 || c > 0;
-    writeln('a > 0 || c > 0 = ' + result + ' (should be 1)');
+    system.writeln('a > 0 || c > 0 = ' + result + ' (should be 1)');
     
     result = a > 10 || b > 5;
-    writeln('a > 10 || b > 5 = ' + result + ' (should be 1)');
+    system.writeln('a > 10 || b > 5 = ' + result + ' (should be 1)');
     
     result = a > 10 || c > 0;
-    writeln('a > 10 || c > 0 = ' + result + ' (should be 0)');
+    system.writeln('a > 10 || c > 0 = ' + result + ' (should be 0)');
     
     result = a == 5 || b == 5;
-    writeln('a == 5 || b == 5 = ' + result + ' (should be 1)');
+    system.writeln('a == 5 || b == 5 = ' + result + ' (should be 1)');
     
-    writeln('');
+    system.writeln('');
     
     // Test Logical NOT (!)
-    writeln('=== Logical NOT (!) Tests ===');
+    system.writeln('=== Logical NOT (!) Tests ===');
     
     result = !(a > 0);
-    writeln('!(a > 0) = ' + result + ' (should be 0)');
+    system.writeln('!(a > 0) = ' + result + ' (should be 0)');
     
     result = !(c > 0);
-    writeln('!(c > 0) = ' + result + ' (should be 1)');
+    system.writeln('!(c > 0) = ' + result + ' (should be 1)');
     
     result = !(a > 10);
-    writeln('!(a > 10) = ' + result + ' (should be 1)');
+    system.writeln('!(a > 10) = ' + result + ' (should be 1)');
     
     result = !(a == 5);
-    writeln('!(a == 5) = ' + result + ' (should be 0)');
+    system.writeln('!(a == 5) = ' + result + ' (should be 0)');
     
-    writeln('');
+    system.writeln('');
     
     // Test Complex Logical Expressions
-    writeln('=== Complex Logical Expressions ===');
+    system.writeln('=== Complex Logical Expressions ===');
     
     result = (a > 0 && b > 0) || (c > 0);
-    writeln('(a > 0 && b > 0) || (c > 0) = ' + result + ' (should be 1)');
+    system.writeln('(a > 0 && b > 0) || (c > 0) = ' + result + ' (should be 1)');
     
     result = (a > 10) || (b > 5 && c > 0);
-    writeln('(a > 10) || (b > 5 && c > 0) = ' + result + ' (should be 1)');
+    system.writeln('(a > 10) || (b > 5 && c > 0) = ' + result + ' (should be 1)');
     
     result = !(a > 0 && b > 0);
-    writeln('!(a > 0 && b > 0) = ' + result + ' (should be 0)');
+    system.writeln('!(a > 0 && b > 0) = ' + result + ' (should be 0)');
     
     result = !(a > 10) && !(c > 0);
-    writeln('!(a > 10) && !(c > 0) = ' + result + ' (should be 1)');
+    system.writeln('!(a > 10) && !(c > 0) = ' + result + ' (should be 1)');
     
-    writeln('');
-    writeln('=== Logical Operators Demo Complete ===');
+    system.writeln('');
+    system.writeln('=== Logical Operators Demo Complete ===');
   end;
 end;

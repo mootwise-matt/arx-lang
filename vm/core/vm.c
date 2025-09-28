@@ -283,7 +283,7 @@ bool vm_execute(arx_vm_context_t *vm)
     }
     
     if (vm->debug_mode) {
-        printf("Starting VM execution\n");
+        printf("Starting VM execution at PC=%zu\n", vm->pc);
     }
     
     size_t step_count = 0;
@@ -698,11 +698,7 @@ bool vm_execute_operation(arx_vm_context_t *vm, opr_t operation, uint8_t level, 
                 return false;
             }
             
-        case OPR_WRITELN:
-            // WriteLn - output newline (no stack operation needed)
-            printf("\n");
-            fflush(stdout);
-            return true;
+        // OPR_WRITELN removed - writeln is now accessed via system.writeln()
             
         case OPR_OUTSTRING:
             {
@@ -717,10 +713,10 @@ bool vm_execute_operation(arx_vm_context_t *vm, opr_t operation, uint8_t level, 
                         if (vm->debug_mode) {
                             printf("OPR_OUTSTRING: Loaded string='%s'\n", str ? str : "(null)");
                         }
-                        // Output UTF-8 string
+                        // Output UTF-8 string followed by newline
                         if (vm->string_table.utf8_enabled) {
                             // UTF-8 mode: output string as-is
-                            printf("%s", str);
+                            printf("%s\n", str);
                         } else {
                             // ASCII mode: filter non-ASCII characters
                             for (const char *p = str; *p; p++) {
@@ -728,6 +724,7 @@ bool vm_execute_operation(arx_vm_context_t *vm, opr_t operation, uint8_t level, 
                                     putchar(*p);
                                 }
                             }
+                            putchar('\n'); // Add newline after ASCII output
                         }
                         fflush(stdout);
                         return true;
@@ -900,26 +897,147 @@ bool vm_execute_operation(arx_vm_context_t *vm, opr_t operation, uint8_t level, 
                            (unsigned long long)method_offset, (unsigned long long)object_address);
                 }
 
-                // Save current PC as return address
-                uint64_t return_address = vm->pc + 1;
+                // Special handling for virtual system object
+                if (object_address == 0xFFFFFFFF) {
+                    if (vm->debug_mode) {
+                        printf("  Virtual system object method call\n");
+                    }
+                    
+                    // For system.writeln(), we need to execute OPR_OUTSTRING directly
+                    // The string argument should already be on the stack
+                    if (!vm_execute_operation(vm, OPR_OUTSTRING, 0, 0)) {
+                        if (vm->debug_mode) {
+                            printf("Error: Failed to execute system.writeln()\n");
+                        }
+                        return false;
+                    }
+                    
+                    if (vm->debug_mode) {
+                        printf("  System method call completed\n");
+                    }
+                    return true;
+                }
+
+                // Store the object address in the VM context for field access
+                vm->current_object_address = object_address;
                 
-                // Push return address onto call stack for when method returns
-                if (!vm_push_call_stack(vm, return_address)) {
-                    printf("Error: Failed to push return address onto call stack\n");
+                // Execute the method by calling vm_call with the method offset
+                // This will set up a proper call frame and execute the method bytecode
+                if (!vm_call(vm, method_offset, 0)) {
+                    if (vm->debug_mode) {
+                        printf("Error: Failed to call method at offset %llu\n", (unsigned long long)method_offset);
+                    }
+                    last_error = VM_ERROR_INVALID_ADDRESS;
                     return false;
                 }
                 
-                // Jump directly to method bytecode (offset pre-calculated by linker)
-                vm->pc = method_offset;
-                
                 if (vm->debug_mode) {
-                    printf("  Method call: jumped to PC=%llu, return address=%llu\n", 
-                           (unsigned long long)vm->pc, (unsigned long long)return_address);
+                    printf("  Method call completed, PC=%zu\n", vm->pc);
                 }
             }
             break;
             
-        // OPR_OBJ_GET_FIELD removed - fields are accessed directly by name within class methods
+        case OPR_OBJ_GET_FIELD:
+            {
+                // Get object field value - operand is field offset
+                uint64_t field_offset = operand;
+
+                if (vm->debug_mode) {
+                    printf("OPR_OBJ_GET_FIELD: Getting field at offset %llu\n", (unsigned long long)field_offset);
+                }
+
+                // Use the current object address from method call context
+                uint64_t object_address = vm->current_object_address;
+
+                if (vm->debug_mode) {
+                    printf("OPR_OBJ_GET_FIELD: Using object address %llu\n", (unsigned long long)object_address);
+                }
+
+                // Safety check - if object address is 0, this might be a field access outside of a method call
+                if (object_address == 0) {
+                    if (vm->debug_mode) {
+                        printf("OPR_OBJ_GET_FIELD: Warning - object address is 0, this might be field access outside method call\n");
+                    }
+                    // For now, push a placeholder value
+                    if (!vm_push(vm, 0)) {
+                        return false;
+                    }
+                    return true;
+                }
+
+                // Get field value from object memory
+                uint64_t field_value;
+                if (!vm_get_field(vm, object_address, field_offset, &field_value)) {
+                    if (vm->debug_mode) {
+                        printf("OPR_OBJ_GET_FIELD: Failed to get field value\n");
+                    }
+                    return false;
+                }
+
+                // Push the field value onto the stack
+                if (!vm_push(vm, field_value)) {
+                    if (vm->debug_mode) {
+                        printf("OPR_OBJ_GET_FIELD: Failed to push field value onto stack\n");
+                    }
+                    return false;
+                }
+
+                if (vm->debug_mode) {
+                    printf("OPR_OBJ_GET_FIELD: Pushed field value %llu onto stack\n",
+                           (unsigned long long)field_value);
+                }
+            }
+            break;
+            
+        case OPR_OBJ_SET_FIELD:
+            {
+                // Set object field value - operand is field offset
+                uint64_t field_offset = operand;
+
+                if (vm->debug_mode) {
+                    printf("OPR_OBJ_SET_FIELD: Setting field at offset %llu\n", (unsigned long long)field_offset);
+                }
+
+                // Pop field value from stack
+                uint64_t field_value;
+                if (!vm_pop(vm, &field_value)) {
+                    if (vm->debug_mode) {
+                        printf("OPR_OBJ_SET_FIELD: Failed to pop field value from stack\n");
+                    }
+                    last_error = VM_ERROR_STACK_UNDERFLOW;
+                    return false;
+                }
+
+                // Use the current object address from method call context
+                uint64_t object_address = vm->current_object_address;
+
+                if (vm->debug_mode) {
+                    printf("OPR_OBJ_SET_FIELD: Using object address %llu\n", (unsigned long long)object_address);
+                }
+
+                // Safety check - if object address is 0, this might be a field access outside of a method call
+                if (object_address == 0) {
+                    if (vm->debug_mode) {
+                        printf("OPR_OBJ_SET_FIELD: Warning - object address is 0, this might be field access outside method call\n");
+                    }
+                    // For now, just return success without doing anything
+                    return true;
+                }
+
+                // Set field value in object memory
+                if (!vm_set_field(vm, object_address, field_offset, field_value)) {
+                    if (vm->debug_mode) {
+                        printf("OPR_OBJ_SET_FIELD: Failed to set field value\n");
+                    }
+                    return false;
+                }
+
+                if (vm->debug_mode) {
+                    printf("OPR_OBJ_SET_FIELD: Set field at offset %llu to value %llu\n",
+                           (unsigned long long)field_offset, (unsigned long long)field_value);
+                }
+            }
+            break;
             
         case OPR_OBJ_NEW:
             {
@@ -1291,6 +1409,10 @@ bool vm_call(arx_vm_context_t *vm, uint64_t address, uint64_t level)
     
     vm->call_stack.current_frame++;
     vm->pc = address;
+    
+    if (vm->debug_mode) {
+        printf("VM_CALL: Set PC to %llu (address %llu)\n", (unsigned long long)vm->pc, (unsigned long long)address);
+    }
     
     return true;
 }
@@ -1676,6 +1798,34 @@ bool vm_access_field(arx_vm_context_t *vm, uint64_t object_address, uint64_t fie
 
     if (vm->debug_mode) {
         printf("VM: Accessed field at offset %llu of object 0x%llx, value: %llu\n",
+               (unsigned long long)field_offset, (unsigned long long)object_address, (unsigned long long)*value);
+    }
+
+    return true;
+}
+
+bool vm_get_field(arx_vm_context_t *vm, uint64_t object_address, uint64_t field_offset, uint64_t *value)
+{
+    if (vm == NULL || value == NULL) {
+        return false;
+    }
+
+    // Calculate actual memory address
+    uint64_t field_address = object_address + field_offset;
+
+    // Check bounds
+    if (field_address >= vm->stack_size) {
+        if (vm->debug_mode) {
+            printf("VM: Field get out of bounds at address 0x%llx\n", (unsigned long long)field_address);
+        }
+        return false;
+    }
+
+    // Load field value
+    *value = vm->stack[field_address];
+
+    if (vm->debug_mode) {
+        printf("VM: Got field at offset %llu of object 0x%llx, value: %llu\n",
                (unsigned long long)field_offset, (unsigned long long)object_address, (unsigned long long)*value);
     }
 

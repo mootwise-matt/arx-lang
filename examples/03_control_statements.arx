@@ -5,147 +5,147 @@ module ControlStatementsDemo;
 class App
   procedure Main
   begin
-    writeln('=== ARX Control Statements Demo ===');
-    writeln('');
+    system.writeln('=== ARX Control Statements Demo ===');
+    system.writeln('');
     
     // FOR Loop demonstration
-    writeln('=== FOR Loop Example ===');
-    writeln('Counting from 1 to 5:');
+    system.writeln('=== FOR Loop Example ===');
+    system.writeln('Counting from 1 to 5:');
     
     for i = 1 to 5 do
     begin
-      writeln('Loop iteration: ' + i);
+      system.writeln('Loop iteration: ' + i);
     end;
     
-    writeln('');
+    system.writeln('');
     
     // FOR Loop with arithmetic
-    writeln('=== FOR Loop with Arithmetic ===');
-    writeln('Calculating squares from 1 to 4:');
+    system.writeln('=== FOR Loop with Arithmetic ===');
+    system.writeln('Calculating squares from 1 to 4:');
     
     for num = 1 to 4 do
     begin
       integer square;
       square = num * num;
-      writeln('Square of ' + num + ' = ' + square);
+      system.writeln('Square of ' + num + ' = ' + square);
     end;
     
-    writeln('');
+    system.writeln('');
     
     // Comparison operators
-    writeln('=== Comparison Operators ===');
+    system.writeln('=== Comparison Operators ===');
     integer x;
     integer y;
     x = 10;
     y = 20;
     
-    writeln('x = ' + x + ', y = ' + y);
-    writeln('Comparison expressions:');
-    writeln('x == y would be: ' + x + ' == ' + y);
-    writeln('x != y would be: ' + x + ' != ' + y);
-    writeln('x < y would be: ' + x + ' < ' + y);
-    writeln('x > y would be: ' + x + ' > ' + y);
-    writeln('x <= y would be: ' + x + ' <= ' + y);
-    writeln('x >= y would be: ' + x + ' >= ' + y);
+    system.writeln('x = ' + x + ', y = ' + y);
+    system.writeln('Comparison expressions:');
+    system.writeln('x == y would be: ' + x + ' == ' + y);
+    system.writeln('x != y would be: ' + x + ' != ' + y);
+    system.writeln('x < y would be: ' + x + ' < ' + y);
+    system.writeln('x > y would be: ' + x + ' > ' + y);
+    system.writeln('x <= y would be: ' + x + ' <= ' + y);
+    system.writeln('x >= y would be: ' + x + ' >= ' + y);
     
-    writeln('');
+    system.writeln('');
     
     // Logical operators (boolean literals not yet implemented)
-    writeln('=== Logical Operators ===');
-    writeln('Note: Boolean literals (true/false) are planned but not yet implemented');
-    writeln('Logical operators (and, or, not) will work with boolean expressions');
+    system.writeln('=== Logical Operators ===');
+    system.writeln('Note: Boolean literals (true/false) are planned but not yet implemented');
+    system.writeln('Logical operators (and, or, not) will work with boolean expressions');
     
-    writeln('');
+    system.writeln('');
     
     // Arithmetic expressions for control flow
-    writeln('=== Arithmetic for Control Flow ===');
+    system.writeln('=== Arithmetic for Control Flow ===');
     integer counter;
     counter = 1;
-    writeln('Counter starts at: ' + counter);
+    system.writeln('Counter starts at: ' + counter);
     
     counter = counter + 1;
-    writeln('Counter after increment: ' + counter);
+    system.writeln('Counter after increment: ' + counter);
     
     counter = counter * 2;
-    writeln('Counter after doubling: ' + counter);
+    system.writeln('Counter after doubling: ' + counter);
     
-  writeln('');
+  system.writeln('');
   
   // WHILE Loop demonstration
-  writeln('=== WHILE Loop Example ===');
-  writeln('Basic WHILE loop (runs once):');
+  system.writeln('=== WHILE Loop Example ===');
+  system.writeln('Basic WHILE loop (runs once):');
   
   integer while_counter;
   while_counter = 1;
   
   while while_counter do
   begin
-    writeln('WHILE loop iteration: ' + while_counter);
+    system.writeln('WHILE loop iteration: ' + while_counter);
     while_counter = 0;  // Exit condition
   end;
   
-           writeln('');
+           system.writeln('');
            
            // IF Statement demonstration
-           writeln('=== IF Statement Example ===');
-           writeln('Basic IF statement:');
+           system.writeln('=== IF Statement Example ===');
+           system.writeln('Basic IF statement:');
            
            integer test_value;
            test_value = 1;
            
            if test_value then
            begin
-             writeln('IF condition is true (value = 1)');
+             system.writeln('IF condition is true (value = 1)');
            end;
            
-           writeln('');
-           writeln('IF with ELSE:');
+           system.writeln('');
+           system.writeln('IF with ELSE:');
            
            test_value = 0;
            if test_value then
            begin
-             writeln('This should not print');
+             system.writeln('This should not print');
            else
-             writeln('ELSE condition executed (value = 0)');
+             system.writeln('ELSE condition executed (value = 0)');
            end;
            
-           writeln('');
-           writeln('IF with ELSEIF and ELSE:');
+           system.writeln('');
+           system.writeln('IF with ELSEIF and ELSE:');
            
            test_value = 2;
            if test_value == 1 then
            begin
-             writeln('IF condition encountered');
+             system.writeln('IF condition encountered');
            elseif test_value == 2 then
-             writeln('ELSEIF condition encountered');
+             system.writeln('ELSEIF condition encountered');
            else
-             writeln('ELSE condition encountered');
+             system.writeln('ELSE condition encountered');
            end;
            
-           writeln('');
-           writeln('IF with Relational Operators:');
+           system.writeln('');
+           system.writeln('IF with Relational Operators:');
            
            integer score;
            score = 85;
            
            if score >= 90 then
            begin
-             writeln('Grade: A (score >= 90)');
+             system.writeln('Grade: A (score >= 90)');
            elseif score >= 80 then
-             writeln('Grade: B (score >= 80)');
+             system.writeln('Grade: B (score >= 80)');
            elseif score >= 70 then
-             writeln('Grade: C (score >= 70)');
+             system.writeln('Grade: C (score >= 70)');
            elseif score >= 60 then
-             writeln('Grade: D (score >= 60)');
+             system.writeln('Grade: D (score >= 60)');
            else
-             writeln('Grade: F (score < 60)');
+             system.writeln('Grade: F (score < 60)');
            end;
            
-           writeln('');
-           writeln('=== Control Statements Demo Complete ===');
-           writeln('FOR loops are fully working! Both loop termination and body execution are working correctly.');
-           writeln('WHILE loops are working for basic conditions (variables, literals).');
-           writeln('IF statements are fully working! IF, ELSEIF, and ELSE clauses all execute correctly.');
-           writeln('Comparison operators (<, <=, >, >=) are now fully implemented!');
+           system.writeln('');
+           system.writeln('=== Control Statements Demo Complete ===');
+           system.writeln('FOR loops are fully working! Both loop termination and body execution are working correctly.');
+           system.writeln('WHILE loops are working for basic conditions (variables, literals).');
+           system.writeln('IF statements are fully working! IF, ELSEIF, and ELSE clauses all execute correctly.');
+           system.writeln('Comparison operators (<, <=, >, >=) are now fully implemented!');
   end;
 end;

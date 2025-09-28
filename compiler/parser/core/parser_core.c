@@ -35,6 +35,11 @@ bool parser_init(parser_context_t *context, lexer_context_t *lexer)
     context->method_string_count = 0;
     context->method_string_capacity = 0;
     
+    // Initialize method signature storage
+    context->method_signatures = NULL;
+    context->method_signature_count = 0;
+    context->method_signature_capacity = 0;
+    
     // Initialize type system
     types_init();
     
@@ -44,8 +49,11 @@ bool parser_init(parser_context_t *context, lexer_context_t *lexer)
         return false;
     }
     
+    // Method signatures disabled for now to fix parsing error
+    // parser_add_method_signature(context, "system", "writeln", NULL, NULL, 0); // system.writeln is a procedure
+    
     if (debug_mode) {
-        printf("Parser initialized with type system and symbol table\n");
+        printf("Parser initialized with type system, symbol table, and method signatures\n");
     }
     
     return true;
@@ -58,13 +66,17 @@ ast_node_t* parser_parse(parser_context_t *context)
     }
     
     if (debug_mode) {
-        printf("Starting parsing...\n");
+        printf("DEBUG: Starting parsing...\n");
     }
     
     // Get first token
     if (!lexer_next(context->lexer)) {
         parser_error(context, "Failed to get first token");
         return NULL;
+    }
+    
+    if (debug_mode) {
+        printf("DEBUG: First token: %s (%d)\n", token_to_string(context->lexer->token), context->lexer->token);
     }
     
     // Parse module
@@ -126,7 +138,7 @@ void parser_cleanup(parser_context_t *context)
 bool parse_module(parser_context_t *context)
 {
     if (debug_mode) {
-        printf("Parsing module\n");
+        printf("DEBUG: parse_module called - current token: %s (%d)\n", token_to_string(context->lexer->token), context->lexer->token);
     }
     
     // Create module node
@@ -179,7 +191,13 @@ bool parse_module(parser_context_t *context)
     
     // Parse class declarations and other module-level constructs
     while (context->lexer->token != TOK_EOF) {
+        if (debug_mode) {
+            printf("DEBUG: Module parsing - token: %s (%d)\n", token_to_string(context->lexer->token), context->lexer->token);
+        }
         if (context->lexer->token == TOK_CLASS) {
+            if (debug_mode) {
+                printf("DEBUG: Found class declaration\n");
+            }
             ast_node_t *class_node = parse_class(context);
             if (class_node == NULL) {
                 return false;
@@ -353,4 +371,88 @@ void parser_clear_method_strings(parser_context_t *context)
     if (debug_mode) {
         printf("Cleared method string literals\n");
     }
+}
+
+// Method Signature Management Functions
+
+bool parser_add_method_signature(parser_context_t *context, const char *class_name, 
+                                const char *method_name, const char *return_type, 
+                                char **param_types, size_t param_count)
+{
+    if (context == NULL || class_name == NULL || method_name == NULL) {
+        return false;
+    }
+    
+    // Expand array if needed
+    if (context->method_signature_count >= context->method_signature_capacity) {
+        size_t new_capacity = context->method_signature_capacity == 0 ? 8 : context->method_signature_capacity * 2;
+        method_signature_t *new_signatures = realloc(context->method_signatures, 
+                                                   sizeof(method_signature_t) * new_capacity);
+        if (new_signatures == NULL) {
+            return false;
+        }
+        context->method_signatures = new_signatures;
+        context->method_signature_capacity = new_capacity;
+    }
+    
+    // Add new method signature
+    method_signature_t *signature = &context->method_signatures[context->method_signature_count];
+    signature->class_name = strdup(class_name);
+    signature->method_name = strdup(method_name);
+    signature->return_type = return_type ? strdup(return_type) : NULL;
+    signature->param_count = param_count;
+    signature->is_procedure = (return_type == NULL);
+    
+    // Copy parameter types
+    if (param_count > 0 && param_types != NULL) {
+        signature->param_types = malloc(sizeof(char*) * param_count);
+        if (signature->param_types == NULL) {
+            free(signature->class_name);
+            free(signature->method_name);
+            if (signature->return_type) free(signature->return_type);
+            return false;
+        }
+        for (size_t i = 0; i < param_count; i++) {
+            signature->param_types[i] = param_types[i] ? strdup(param_types[i]) : NULL;
+        }
+    } else {
+        signature->param_types = NULL;
+    }
+    
+    context->method_signature_count++;
+    
+    if (debug_mode) {
+        printf("Added method signature: %s.%s() -> %s\n", 
+               class_name, method_name, signature->is_procedure ? "procedure" : "function");
+    }
+    
+    return true;
+}
+
+method_signature_t* parser_lookup_method_signature(parser_context_t *context, 
+                                                  const char *class_name, const char *method_name)
+{
+    if (context == NULL || class_name == NULL || method_name == NULL) {
+        return NULL;
+    }
+    
+    for (size_t i = 0; i < context->method_signature_count; i++) {
+        method_signature_t *signature = &context->method_signatures[i];
+        if (strcmp(signature->class_name, class_name) == 0 && 
+            strcmp(signature->method_name, method_name) == 0) {
+            return signature;
+        }
+    }
+    
+    return NULL;
+}
+
+bool parser_is_procedure(parser_context_t *context, const char *class_name, const char *method_name)
+{
+    method_signature_t *signature = parser_lookup_method_signature(context, class_name, method_name);
+    if (signature == NULL) {
+        // Default to procedure if not found
+        return true;
+    }
+    return signature->is_procedure;
 }

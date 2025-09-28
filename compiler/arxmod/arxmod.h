@@ -71,10 +71,12 @@ typedef struct {
 // Method entry for class manifest
 typedef struct {
     char        method_name[32];   // Method name (null-terminated)
-    uint64_t    method_id;         // Unique method ID
+    uint64_t    method_id;         // Unique method ID (signature-based hash)
     uint64_t    offset;            // Offset from class base address
     uint32_t    parameter_count;   // Number of parameters
     uint32_t    flags;             // Method flags (static, virtual, etc.)
+    char        param_types[64];   // Parameter types as comma-separated string
+    char        return_type[32];   // Return type (empty for procedures)
 } method_entry_t;
 
 // Field entry for class manifest

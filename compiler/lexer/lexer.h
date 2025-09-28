@@ -73,7 +73,7 @@ typedef enum
     TOK_STRING,
     TOK_OF,
     TOK_ARRAY,
-    TOK_WRITELN,
+    // TOK_WRITELN removed - writeln is now accessed via system.writeln()
     TOK_CLASS,
     TOK_EXTENDS,
     TOK_NEW,

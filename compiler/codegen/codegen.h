@@ -79,13 +79,16 @@ size_t codegen_get_method_offset(codegen_context_t *context, const char *method_
 
 // Unique class ID generation functions
 uint64_t codegen_generate_unique_class_id(const char *module_name, const char *class_name);
+uint64_t codegen_generate_unique_method_id(const char *module_name, const char *class_name, 
+                                          const char *method_name, const char *param_types, 
+                                          const char *return_type);
 
 bool generate_class(codegen_context_t *context, ast_node_t *node);
 bool generate_field(codegen_context_t *context, ast_node_t *node);
 bool generate_method(codegen_context_t *context, ast_node_t *node);
 bool generate_statement(codegen_context_t *context, ast_node_t *node);
 bool generate_assignment(codegen_context_t *context, ast_node_t *node);
-bool generate_writeln_statement(codegen_context_t *context, const char *string_literal);
+// generate_writeln_statement is no longer needed - writeln is now a global procedure call
 bool generate_expression(codegen_context_t *context, ast_node_t *node);
 bool generate_literal(codegen_context_t *context, ast_node_t *node);
 bool generate_identifier(codegen_context_t *context, ast_node_t *node);
@@ -99,6 +102,8 @@ bool generate_if_statement(codegen_context_t *context, ast_node_t *node);
 bool generate_while_statement(codegen_context_t *context, ast_node_t *node);
 bool generate_for_statement(codegen_context_t *context, ast_node_t *node);
 bool generate_return_statement(codegen_context_t *context, ast_node_t *node);
+// generate_writeln_ast_statement is no longer needed - writeln is now a global procedure call
+size_t get_or_add_string_literal(codegen_context_t *context, const char *string_literal);
 
 // Instruction generation
 void emit_instruction(codegen_context_t *context, opcode_t opcode, uint8_t level, uint64_t operand);

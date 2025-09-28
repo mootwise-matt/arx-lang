@@ -15,6 +15,16 @@
 // Forward declarations
 typedef struct parser_context parser_context_t;
 
+// Method signature structure
+typedef struct {
+    char *class_name;          // Class containing the method
+    char *method_name;         // Method name
+    char *return_type;         // Return type (NULL for procedures, type for functions)
+    char **param_types;        // Parameter types array
+    size_t param_count;        // Number of parameters
+    bool is_procedure;         // True if procedure, false if function
+} method_signature_t;
+
 // Parser context structure (from parser.h)
 struct parser_context {
     lexer_context_t *lexer;        // Lexer context
@@ -34,6 +44,11 @@ struct parser_context {
     char *current_new_class;       // Class name for NEW expression
     int constructor_param_count;   // Number of constructor parameters
     bool has_constructor_params;   // Whether constructor has parameters
+    
+    // Method signature storage
+    void *method_signatures;       // Array of method signatures (opaque pointer)
+    size_t method_signature_count;          // Number of method signatures
+    size_t method_signature_capacity;       // Capacity of method signatures array
 };
 
 // Core Parser Functions
@@ -48,6 +63,14 @@ bool parse_module(parser_context_t *context);
 bool match_token(parser_context_t *context, token_t expected);
 bool expect_token(parser_context_t *context, token_t expected);
 void parser_error(parser_context_t *context, const char *message);
+
+// Method Signature Management
+bool parser_add_method_signature(parser_context_t *context, const char *class_name, 
+                                const char *method_name, const char *return_type, 
+                                char **param_types, size_t param_count);
+method_signature_t* parser_lookup_method_signature(parser_context_t *context, 
+                                                  const char *class_name, const char *method_name);
+bool parser_is_procedure(parser_context_t *context, const char *class_name, const char *method_name);
 void parser_warning(parser_context_t *context, const char *message);
 bool advance_token(parser_context_t *context);
 

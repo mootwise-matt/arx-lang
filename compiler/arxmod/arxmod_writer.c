@@ -230,8 +230,13 @@ bool arxmod_writer_add_code_section(arxmod_writer_t *writer, instruction_t *inst
             return false;
         }
         
+        // Record actual file position for this section
+        long actual_position = ftell(writer->file);
+        toc_entry->offset = actual_position - writer->data_offset; // Update with actual offset
+        
         if (writer->debug_output) {
-            printf("Writing %zu instructions at file position %ld\n", instruction_count, expected_position);
+            printf("Writing %zu instructions at file position %ld (actual offset %llu)\n", 
+                   instruction_count, actual_position, (unsigned long long)toc_entry->offset);
             // Debug: print first few instructions
             for (size_t i = 0; i < instruction_count && i < 3; i++) {
                 printf("  Instruction %zu: opcode=0x%02x, operand=0x%016llx\n", 
@@ -244,7 +249,9 @@ bool arxmod_writer_add_code_section(arxmod_writer_t *writer, instruction_t *inst
         }
     }
     
-    writer->current_data_offset += toc_entry->size;
+    // Update current_data_offset to actual end position
+    long end_position = ftell(writer->file);
+    writer->current_data_offset = end_position - writer->data_offset;
     writer->section_count++;
     
     if (writer->debug_output) {
@@ -453,6 +460,9 @@ bool arxmod_writer_add_classes_section(arxmod_writer_t *writer, class_entry_t *c
     if (writer->debug_output) {
         printf("CLASSES section: current_data_offset=%zu, offset=%zu, size=%zu\n", 
                writer->current_data_offset, toc_entry->offset, toc_entry->size);
+        printf("  Size calculation: %zu * %zu + %zu * %zu + %zu * %zu = %zu\n",
+               class_count, sizeof(class_entry_t), method_count, sizeof(method_entry_t), 
+               field_count, sizeof(field_entry_t), toc_entry->size);
     }
     
     // Seek to the correct position in the file
@@ -467,9 +477,14 @@ bool arxmod_writer_add_classes_section(arxmod_writer_t *writer, class_entry_t *c
         }
         return false;
     }
+    
+    // Record actual file position for this section
+    long actual_position = ftell(writer->file);
+    toc_entry->offset = actual_position - writer->data_offset; // Update with actual offset
+    
     if (writer->debug_output) {
-        long actual_position = ftell(writer->file);
-        printf("CLASSES: Actual position after fseek: %ld\n", actual_position);
+        printf("CLASSES: Actual position after fseek: %ld (updated offset to %llu)\n", 
+               actual_position, (unsigned long long)toc_entry->offset);
     }
     
     // Write class data with inline methods and fields
@@ -515,12 +530,14 @@ bool arxmod_writer_add_classes_section(arxmod_writer_t *writer, class_entry_t *c
         }
     }
     
-    writer->current_data_offset += toc_entry->size;
+    // Update current_data_offset to actual end position
+    long end_position = ftell(writer->file);
+    writer->current_data_offset = end_position - writer->data_offset;
     writer->section_count++;
     
     if (writer->debug_output) {
-        printf("Classes section added: %zu classes (%llu bytes)\n", 
-               class_count, (unsigned long long)toc_entry->size);
+        printf("Classes section added: %zu classes (%llu bytes), actual offset=%llu\n", 
+               class_count, (unsigned long long)toc_entry->size, (unsigned long long)toc_entry->offset);
     }
     
     return true;
@@ -558,6 +575,10 @@ bool arxmod_writer_add_app_section(arxmod_writer_t *writer, const char *app_name
         return false;
     }
     
+    // Record actual file position for this section
+    long actual_position = ftell(writer->file);
+    toc_entry->offset = actual_position - writer->data_offset; // Update with actual offset
+    
     // Write app name
     if (app_name_len > 0) {
         if (fwrite(app_name, 1, app_name_len, writer->file) != app_name_len) {
@@ -572,7 +593,9 @@ bool arxmod_writer_add_app_section(arxmod_writer_t *writer, const char *app_name
         }
     }
     
-    writer->current_data_offset += toc_entry->size;
+    // Update current_data_offset to actual end position
+    long end_position = ftell(writer->file);
+    writer->current_data_offset = end_position - writer->data_offset;
     writer->section_count++;
     
     if (writer->debug_output) {

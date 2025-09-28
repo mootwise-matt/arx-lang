@@ -26,7 +26,7 @@ ast_node_t* parse_assignment_statement_with_var(parser_context_t *context, const
 ast_node_t* parse_assignment_statement(parser_context_t *context);
 
 // Output Statement Functions
-ast_node_t* parse_writeln_statement(parser_context_t *context);
+// parse_writeln_statement removed - writeln is now accessed via system.writeln()
 
 // Control Flow Statement Functions
 ast_node_t* parse_for_statement(parser_context_t *context);

@@ -407,7 +407,11 @@ bool arxmod_reader_load_classes_section(arxmod_reader_t *reader, class_entry_t *
     }
     
     if (reader->debug_output) {
-        printf("DEBUG: Loading classes section, size=%llu bytes\n", (unsigned long long)section->size);
+        printf("DEBUG: Loading classes section, size=%llu bytes, offset=%llu\n", 
+               (unsigned long long)section->size, (unsigned long long)section->offset);
+        printf("DEBUG: Data section starts at %llu, classes section at %llu\n",
+               (unsigned long long)reader->header.data_offset, 
+               (unsigned long long)(reader->header.data_offset + section->offset));
     }
     
     // For now, let's use the old approach but fix the class count issue
@@ -423,12 +427,20 @@ bool arxmod_reader_load_classes_section(arxmod_reader_t *reader, class_entry_t *
     while (remaining_size >= sizeof(class_entry_t)) {
         class_entry_t temp_class;
         if (fread(&temp_class, sizeof(class_entry_t), 1, reader->file) != 1) {
+            if (reader->debug_output) {
+                printf("DEBUG: Failed to read class entry, remaining_size=%zu\n", remaining_size);
+            }
             break;
         }
         
         (*class_count)++;
         total_method_count += temp_class.method_count;
         total_field_count += temp_class.field_count;
+        
+        if (reader->debug_output) {
+            printf("DEBUG: First pass - class %zu: name='%s', methods=%u, fields=%u\n", 
+                   *class_count, temp_class.class_name, temp_class.method_count, temp_class.field_count);
+        }
         
         remaining_size -= sizeof(class_entry_t);
         

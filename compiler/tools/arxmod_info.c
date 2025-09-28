@@ -138,7 +138,9 @@ int main(int argc, char *argv[])
         field_entry_t *fields = NULL;
         size_t field_count = 0;
         
+        printf("DEBUG: About to load classes section...\n");
         if (arxmod_reader_load_classes_section(&reader, &classes, &class_count, &methods, &method_count, &fields, &field_count)) {
+            printf("DEBUG: Classes section loaded successfully\n");
             printf("\n=== ARX Module Classes ===\n");
             if (class_count == 0) {
                 printf("No classes found in module.\n");
@@ -155,8 +157,36 @@ int main(int argc, char *argv[])
                 }
             }
             
+            // Display methods with signature information
+            if (method_count > 0) {
+                printf("\n=== ARX Module Methods ===\n");
+                printf("Found %zu methods:\n\n", method_count);
+                for (size_t i = 0; i < method_count; i++) {
+                    printf("Method %zu: %s\n", i + 1, methods[i].method_name);
+                    printf("  ID: %llu\n", (unsigned long long)methods[i].method_id);
+                    printf("  Offset: %llu\n", (unsigned long long)methods[i].offset);
+                    printf("  Parameters: %u\n", methods[i].parameter_count);
+                    if (methods[i].param_types[0] != '\0') {
+                        printf("  Parameter Types: %s\n", methods[i].param_types);
+                    }
+                    if (methods[i].return_type[0] != '\0') {
+                        printf("  Return Type: %s\n", methods[i].return_type);
+                    } else {
+                        printf("  Return Type: (procedure - no return)\n");
+                    }
+                    printf("  Flags: 0x%08X\n", methods[i].flags);
+                    printf("\n");
+                }
+            }
+            
             if (classes) {
                 free(classes);
+            }
+            if (methods) {
+                free(methods);
+            }
+            if (fields) {
+                free(fields);
             }
         } else {
             printf("Error: Could not load classes section\n");

@@ -16,14 +16,15 @@ typedef enum {
     AST_NONE = 0,
     AST_MODULE,
     AST_CLASS,
-    AST_FIELD,
-    AST_METHOD,
-    AST_PROCEDURE,
-    AST_FUNCTION,
+    AST_OBJECT_VAR,        // Object variable (was AST_FIELD)
+    AST_PROCEDURE,         // Procedure - returns no value
+    AST_FUNCTION,          // Function - returns a known type
     AST_VAR_DECL,
     AST_ASSIGNMENT,
-    AST_METHOD_CALL,
-    AST_FIELD_ACCESS,
+    AST_METHOD_CALL,       // Method call (temporarily restored)
+    AST_PROCEDURE_CALL,    // Procedure call - no return value
+    AST_FUNCTION_CALL,     // Function call - returns a value
+    AST_FIELD_ACCESS,      // Keep for now, will be replaced with object variable access
     AST_NEW_EXPR,
     AST_LITERAL,
     AST_IDENTIFIER,
@@ -35,7 +36,7 @@ typedef enum {
     AST_RETURN_STMT,
     AST_BLOCK,
     AST_EXPR_STMT,
-    AST_WRITELN_STMT
+    // AST_WRITELN_STMT removed - writeln is now accessed via system.writeln()
 } ast_node_type_t;
 
 // AST Node structure (from parser.h)

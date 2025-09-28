@@ -10,14 +10,14 @@ class App
     greeting = 'Hello World!';
     
     // Output the string variable
-    writeln(greeting);
+    system.writeln(greeting);
     
     // Output a string literal directly
-    writeln('Welcome to ARX programming language!');
+    system.writeln('Welcome to ARX programming language!');
     
     // Demonstrate string concatenation
     string message;
     message = 'ARX is a modern, object-oriented programming language.';
-    writeln(message);
+    system.writeln(message);
   end;
 end;

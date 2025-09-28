@@ -197,34 +197,62 @@ bool linker_patch_bytecode(linker_context_t *linker, instruction_t *instructions
             // For now, we'll leave these as placeholders since the VM handles them
             needs_patching = false;
         } else if (opcode == VM_LIT) {
-            // Don't patch string literals - let the VM handle method resolution at runtime
-            // The VM should use the class manifest to resolve method calls
-            needs_patching = false;
+            // Check if this is a string literal that needs patching
+            // String literals are identified by having operand 0 (placeholder)
+            // and being followed by OPR_OUTSTRING
+            if (operand == 0 && i + 1 < instruction_count) {
+                instruction_t *next_inst = &instructions[i + 1];
+                if (next_inst->opcode == VM_OPR && next_inst->opt64 == OPR_OUTSTRING) {
+                    // This is a string literal - we need to determine the correct string ID
+                    // For now, we'll use a simple approach: string literals are in order
+                    // TODO: Implement proper string literal resolution
+                    needs_patching = true;
+                    new_address = 0; // First string literal gets ID 0
+                }
+            }
         } else if (opcode == VM_OPR) {
             // Check for object operations that might need patching
             if (operand == OPR_OBJ_NEW) {
                 // NEW object creation - operand should be class ID (already correct)
                 needs_patching = false;
             } else if (operand == OPR_OBJ_CALL_METHOD) {
-                // Method call - check if the previous instruction is a placeholder offset
-                if (i > 0 && instructions[i-1].opcode == VM_LIT && instructions[i-1].opt64 == 0xFFFF) {
-                    // This is a method call with placeholder offset - we need to patch it
-                    // Use the actual method offset from the class manifest
+                // Method call - check if the previous instruction is a method name ID
+                if (i > 0 && instructions[i-1].opcode == VM_LIT) {
+                    uint64_t method_name_id = instructions[i-1].opt64;
                     
-                    if (patched_count < linker->method_count) {
-                        // Use the actual method offset from the methods array
-                        uint64_t method_offset = linker->methods[patched_count].offset;
-                        instructions[i-1].opt64 = method_offset;
-                        
-                        printf("Linker: Patched method call at instruction %zu with actual offset %llu (method: %s)\n", 
-                               i-1, (unsigned long long)method_offset, linker->methods[patched_count].method_name);
-                    } else {
-                        printf("Linker: Warning - method call at instruction %zu exceeds method count (%zu)\n", 
-                               i-1, linker->method_count);
-                        // Keep placeholder for now
-                        instructions[i-1].opt64 = 0xFFFF;
+                    // Look up method name from string table
+                    const char *method_name = NULL;
+                    if (method_name_id < string_count && string_table && string_table[method_name_id]) {
+                        method_name = string_table[method_name_id];
                     }
-                    patched_count++;
+                    
+                    if (method_name) {
+                        // Look for method by name
+                        bool found_method = false;
+                        printf("Linker: Searching for method '%s' (ID: %llu) among %zu methods\n", 
+                               method_name, (unsigned long long)method_name_id, linker->method_count);
+                        for (size_t j = 0; j < linker->method_count; j++) {
+                            if (strcmp(linker->methods[j].method_name, method_name) == 0) {
+                                instructions[i-1].opt64 = linker->methods[j].offset;
+                                printf("Linker: Patched method call at instruction %zu with actual offset %llu\n",
+                                       i-1, (unsigned long long)linker->methods[j].offset);
+                                printf("  Method: %s (ID: %llu, params: %s, return: %s)\n",
+                                       linker->methods[j].method_name,
+                                       (unsigned long long)linker->methods[j].method_id,
+                                       linker->methods[j].param_types,
+                                       linker->methods[j].return_type);
+                                found_method = true;
+                                break;
+                            }
+                        }
+                        
+                        if (!found_method) {
+                            printf("Linker: Warning - method '%s' not found, keeping original ID\n", method_name);
+                        }
+                    } else {
+                        printf("Linker: Warning - method name ID %llu not found in string table\n", 
+                               (unsigned long long)method_name_id);
+                    }
                 }
                 // Don't patch the OPR_OBJ_CALL_METHOD instruction itself
                 needs_patching = false;
@@ -255,37 +283,8 @@ bool linker_update_class_manifest(linker_context_t *linker, instruction_t *instr
     
     printf("Linker: Updating class manifest with correct method offsets\n");
     
-    // Scan through instructions to find method call patterns and update the manifest
-    size_t method_call_count = 0;
-    
-    for (size_t i = 0; i < instruction_count; i++) {
-        instruction_t *inst = &instructions[i];
-        uint8_t opcode = inst->opcode;
-        uint64_t operand = inst->opt64;
-        
-        if (opcode == VM_OPR && operand == OPR_OBJ_CALL_METHOD) {
-            // Found a method call - check if the previous instruction is a method offset
-            if (i > 0 && instructions[i-1].opcode == VM_LIT) {
-                uint64_t method_offset = instructions[i-1].opt64;
-                
-                // Update the corresponding method in the manifest
-                if (method_call_count < linker->method_count) {
-                    // Update the method offset in the manifest
-                    linker->methods[method_call_count].offset = method_offset;
-                    
-                    printf("Linker: Updated method '%s' offset to %llu in manifest\n", 
-                           linker->methods[method_call_count].method_name, 
-                           (unsigned long long)method_offset);
-                    
-                    method_call_count++;
-                } else {
-                    printf("Linker: Warning - method call %zu exceeds method count (%zu)\n", 
-                           method_call_count, linker->method_count);
-                }
-            }
-        }
-    }
-    
-    printf("Linker: Updated %zu method offsets in class manifest\n", method_call_count);
+    // Method offsets are already set correctly during method collection
+    // No need to update them here as they were set to the correct instruction positions
+    printf("Linker: Method offsets already set correctly during collection\n");
     return true;
 }

@@ -223,6 +223,18 @@ bool runtime_call_main_procedure(runtime_context_t *runtime)
                (unsigned long long)entry_point_address, (unsigned long long)entry_point_address);
     }
     
+    // Safety check for invalid entry point
+    if (entry_point_address == 0) {
+        printf("Error: Entry point is 0 - no valid Main method found\n");
+        return false;
+    }
+    
+    if (entry_point_address >= runtime->vm.instruction_count) {
+        printf("Error: Entry point %llu exceeds instruction count %zu\n", 
+               (unsigned long long)entry_point_address, runtime->vm.instruction_count);
+        return false;
+    }
+    
     // Set up the execution context to call Main
     // Push the object address (this pointer) onto the stack
     if (!vm_push(&runtime->vm, app_object_address)) {
@@ -240,7 +252,7 @@ bool runtime_call_main_procedure(runtime_context_t *runtime)
     
     // Set up a proper call stack frame for the Main procedure
     // This ensures the procedure can return properly when it ends
-    if (!vm_call(&runtime->vm, entry_point_address / sizeof(instruction_t), 0)) {
+    if (!vm_call(&runtime->vm, entry_point_address, 0)) {
         printf("Error: Failed to set up call stack frame for Main procedure\n");
         return false;
     }

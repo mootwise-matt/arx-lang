@@ -85,10 +85,7 @@ bool parse_statement(parser_context_t *context)
         return true;
     }
     
-    // Check for writeln statement
-    if (context->lexer->token == TOK_WRITELN) {
-        return parse_writeln_statement(context);
-    }
+    // writeln is now handled as a global procedure call, not a special statement
     
     // Check for assignment statement (identifier := expression)
     if (context->lexer->token == TOK_IDENT) {
@@ -183,16 +180,7 @@ ast_node_t* parse_statement_ast(parser_context_t *context)
             // Parse RETURN statement
             return parse_return_statement(context);
             
-        case TOK_WRITELN:
-            // Parse the writeln statement and build proper AST structure
-            ast_node_t *expr_node = parse_writeln_statement(context);
-            if (expr_node) {
-                // Create an expression statement node and add the expression as a child
-                ast_node_t *stmt_node = ast_create_node(AST_EXPR_STMT);
-                ast_add_child(stmt_node, expr_node);
-                return stmt_node;
-            }
-            return NULL;
+        // TOK_WRITELN removed - writeln is now accessed via system.writeln()
             
         case TOK_STRING:
         case TOK_INTEGER:
@@ -226,11 +214,11 @@ ast_node_t* parse_statement_ast(parser_context_t *context)
             // Advance to next token to check if it's an assignment
             if (advance_token(context)) {
                 if (context->lexer->token == TOK_ASSIGN) {
-                    if (debug_mode) {
-                        printf("Found identifier with =, parsing assignment AST for variable: %s\n", var_name);
-                    }
+                    printf("PARSE_ASSIGNMENT: Found identifier with =, parsing assignment AST for variable: %s\n", var_name);
                     // Parse assignment with the captured variable name
-                    return parse_assignment_statement_with_var(context, var_name);
+                    ast_node_t *result = parse_assignment_statement_with_var(context, var_name);
+                    printf("PARSE_ASSIGNMENT: parse_assignment_statement_with_var returned: %p\n", result);
+                    return result;
                 } else {
                     // Not an assignment, restore position
                     context->lexer->pos = save_pos;
@@ -244,8 +232,20 @@ ast_node_t* parse_statement_ast(parser_context_t *context)
                 if (var_name) free(var_name);
             }
             
+            // Try to parse as an expression (method call, field access, etc.)
             if (debug_mode) {
-                printf("Found identifier without =, skipping\n");
+                printf("Found identifier without =, trying to parse as expression\n");
+            }
+            ast_node_t *expr = parse_expression(context);
+            if (expr) {
+                if (debug_mode) {
+                    printf("Successfully parsed identifier as expression\n");
+                }
+                return expr;
+            }
+            
+            if (debug_mode) {
+                printf("Failed to parse identifier as expression, skipping\n");
             }
             // Skip identifier
             if (!advance_token(context)) {
@@ -352,9 +352,8 @@ ast_node_t* parse_variable_declaration(parser_context_t *context)
 
 ast_node_t* parse_assignment_statement_with_var(parser_context_t *context, const char *var_name)
 {
-    if (debug_mode) {
-        printf("Parsing assignment statement for variable: %s\n", var_name);
-    }
+    printf("PARSE_ASSIGNMENT: Parsing assignment statement for variable: %s\n", var_name);
+    printf("PARSE_ASSIGNMENT: Current token: %s (%d)\n", token_to_string(context->lexer->token), context->lexer->token);
     
     // Create identifier node for the variable
     ast_node_t *var_node = ast_create_node(AST_IDENTIFIER);
@@ -371,8 +370,14 @@ ast_node_t* parse_assignment_statement_with_var(parser_context_t *context, const
     }
     
     // Parse the expression
+    printf("PARSE_ASSIGNMENT: About to parse expression, current token: %s (%d)\n", 
+           token_to_string(context->lexer->token), context->lexer->token);
+    printf("PARSE_ASSIGNMENT: Lexer position: %zu, token text: '%.*s'\n", 
+           context->lexer->pos, (int)context->lexer->toklen, context->lexer->tokstart);
     ast_node_t *expr_node = parse_expression(context);
+    printf("PARSE_ASSIGNMENT: parse_expression returned: %p\n", expr_node);
     if (!expr_node) {
+        printf("PARSE_ASSIGNMENT: Expression parsing failed\n");
         ast_destroy_node(var_node);
         return NULL;
     }
@@ -480,94 +485,7 @@ ast_node_t* parse_assignment_statement(parser_context_t *context)
     return assign_node;
 }
 
-ast_node_t* parse_writeln_statement(parser_context_t *context)
-{
-    if (debug_mode) {
-        printf("Parsing writeln statement\n");
-    }
-    
-    // Consume WRITELN token
-    if (!advance_token(context)) {
-        return NULL;
-    }
-    
-    // Expect opening parenthesis
-    if (context->lexer->token != TOK_LPAREN) {
-        if (debug_mode) {
-            printf("Error: Expected '(' after writeln\n");
-        }
-        return NULL;
-    }
-    if (!advance_token(context)) {
-        return NULL;
-    }
-    
-    // Parse the expression (can be string literals, variables, or concatenation)
-    // Always try to parse as a full expression first
-    if (debug_mode) {
-        printf("Parsing expression in writeln\n");
-    }
-    
-    // Parse the entire expression and get the AST node
-    ast_node_t *expr_node = parse_expression(context);
-    if (expr_node == NULL) {
-        if (debug_mode) {
-            printf("Error: Failed to parse expression in writeln\n");
-        }
-        return false;
-    }
-    
-    // Check if this was a simple string literal or complex expression
-    // We need to determine if the expression contains concatenation or variables
-    
-    // For the arithmetic example, we know that 'Result: ' + result is a complex expression
-    // We need to detect when we have string concatenation with variables
-    
-    // Simple heuristic: if the current string literal contains "Result: " and we're in
-    // a context where we expect arithmetic, mark as complex
-    // This is a temporary solution until we have proper AST analysis
-    
-    bool is_complex = false;
-    
-    // Check if we have the specific pattern that indicates string concatenation with variables
-    // This is a temporary hardcoded detection for the arithmetic example
-    if (context->current_string_literal && strstr(context->current_string_literal, "Result: ") != NULL) {
-        is_complex = true;
-        if (debug_mode) {
-            printf("Detected complex expression with string concatenation: '%s'\n", context->current_string_literal);
-        }
-    }
-    
-    // TODO: Implement proper expression complexity detection based on AST analysis
-    // This should detect operators like +, -, *, / and variable references
-    
-    if (is_complex) {
-        if (context->current_string_literal) {
-            free(context->current_string_literal);
-        }
-        context->current_string_literal = strdup("COMPLEX_EXPRESSION");
-        
-        // Collect the complex expression marker for the method
-        parser_collect_string_literal(context, "COMPLEX_EXPRESSION");
-        
-        if (debug_mode) {
-            printf("Marked expression as complex - will generate arithmetic and string concatenation code\n");
-        }
-    }
-    
-    // Expect closing parenthesis
-    if (context->lexer->token != TOK_RPAREN) {
-        if (debug_mode) {
-            printf("Error: Expected ')' after writeln argument\n");
-        }
-        return NULL;
-    }
-    if (!advance_token(context)) {
-        return NULL;
-    }
-    
-    return expr_node;
-}
+// parse_writeln_statement removed - writeln is now accessed via system.writeln()
 
 ast_node_t* parse_for_statement(parser_context_t *context)
 {
