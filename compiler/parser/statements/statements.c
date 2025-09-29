@@ -154,6 +154,11 @@ ast_node_t* parse_statement_ast(parser_context_t *context)
         printf("DEBUG: About to enter switch statement\n");
     }
     
+    if (debug_mode) {
+        printf("DEBUG: Switch statement - token value: %d, TOK_SELF: %d\n", context->lexer->token, TOK_SELF);
+        printf("DEBUG: About to enter switch with token: %d\n", context->lexer->token);
+    }
+    
     switch (context->lexer->token) {
         case TOK_FOR:
             if (debug_mode) {
@@ -202,6 +207,22 @@ ast_node_t* parse_statement_ast(parser_context_t *context)
             // Variable declaration: TYPE variable;
             return parse_variable_declaration(context);
             
+        case TOK_SELF:
+            // Parse self reference as an expression
+            if (debug_mode) {
+                printf("DEBUG: TOK_SELF case - parsing self reference as expression\n");
+                printf("DEBUG: TOK_SELF value: %d, token value: %d\n", TOK_SELF, context->lexer->token);
+                printf("DEBUG: About to call parse_expression for self\n");
+            }
+            ast_node_t *result = parse_expression(context);
+            if (debug_mode) {
+                printf("DEBUG: parse_expression returned: %p\n", result);
+                if (result) {
+                    printf("DEBUG: Result type: %d, value: %s\n", result->type, result->value ? result->value : "NULL");
+                }
+            }
+            return result;
+            
         case TOK_IDENT:
             if (debug_mode) {
                 printf("DEBUG: TOK_IDENT case - lexer token=%d, text='%.*s'\n", 
@@ -223,7 +244,7 @@ ast_node_t* parse_statement_ast(parser_context_t *context)
                 }
             }
             
-            // Advance to next token to check if it's an assignment
+            // Advance to next token to check if it's an assignment or method call
             if (advance_token(context)) {
                 if (context->lexer->token == TOK_ASSIGN) {
                     if (debug_mode) {
@@ -231,8 +252,19 @@ ast_node_t* parse_statement_ast(parser_context_t *context)
                     }
                     // Parse assignment with the captured variable name
                     return parse_assignment_statement_with_var(context, var_name);
+                } else if (context->lexer->token == TOK_PERIOD) {
+                    if (debug_mode) {
+                        printf("Found identifier with ., parsing as method call expression: %s\n", var_name);
+                        printf("DEBUG: TOK_PERIOD value: %d, current token: %d\n", TOK_PERIOD, context->lexer->token);
+                    }
+                    // This is a method call or field access, parse as expression
+                    // Restore position and parse as expression
+                    context->lexer->pos = save_pos;
+                    context->lexer->token = save_token;
+                    if (var_name) free(var_name);
+                    return parse_expression(context);
                 } else {
-                    // Not an assignment, restore position
+                    // Not an assignment or method call, restore position
                     context->lexer->pos = save_pos;
                     context->lexer->token = save_token;
                     if (var_name) free(var_name);
@@ -245,7 +277,7 @@ ast_node_t* parse_statement_ast(parser_context_t *context)
             }
             
             if (debug_mode) {
-                printf("Found identifier without =, skipping\n");
+                printf("Found identifier without = or ., skipping\n");
             }
             // Skip identifier
             if (!advance_token(context)) {

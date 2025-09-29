@@ -27,6 +27,7 @@ typedef enum {
     AST_NEW_EXPR,
     AST_LITERAL,
     AST_IDENTIFIER,
+    AST_SELF,
     AST_BINARY_OP,
     AST_UNARY_OP,
     AST_IF_STMT,
@@ -35,7 +36,8 @@ typedef enum {
     AST_RETURN_STMT,
     AST_BLOCK,
     AST_EXPR_STMT,
-    AST_WRITELN_STMT
+    AST_WRITELN_STMT,
+    AST_PARAMETER
 } ast_node_type_t;
 
 // AST Node structure (from parser.h)

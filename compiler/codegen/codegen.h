@@ -82,6 +82,7 @@ uint64_t codegen_generate_unique_class_id(const char *module_name, const char *c
 
 bool generate_class(codegen_context_t *context, ast_node_t *node);
 bool generate_field(codegen_context_t *context, ast_node_t *node);
+bool generate_parameter(codegen_context_t *context, ast_node_t *node);
 bool generate_method(codegen_context_t *context, ast_node_t *node);
 bool generate_statement(codegen_context_t *context, ast_node_t *node);
 bool generate_assignment(codegen_context_t *context, ast_node_t *node);
@@ -89,6 +90,7 @@ bool generate_writeln_statement(codegen_context_t *context, const char *string_l
 bool generate_expression(codegen_context_t *context, ast_node_t *node);
 bool generate_literal(codegen_context_t *context, ast_node_t *node);
 bool generate_identifier(codegen_context_t *context, ast_node_t *node);
+bool generate_self_reference(codegen_context_t *context, ast_node_t *node);
 bool generate_binary_operation(codegen_context_t *context, ast_node_t *node);
 bool generate_unary_operation(codegen_context_t *context, ast_node_t *node);
 bool generate_method_call(codegen_context_t *context, ast_node_t *node);

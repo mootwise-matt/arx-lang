@@ -165,6 +165,10 @@ bool lexer_next(lexer_context_t *context)
             context->token = TOK_IDENT;
         }
         
+        if (debug_mode && strncmp(context->tokstart, "self", context->toklen) == 0) {
+            printf("DEBUG: Lexer found 'self', token value: %d, TOK_SELF: %d\n", context->token, TOK_SELF);
+        }
+        
         if (debug_mode) {
             printf("Token: %s (%.*s)\n", token_to_string(context->token), 
                    (int)context->toklen, context->tokstart);

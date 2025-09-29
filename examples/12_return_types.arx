@@ -1,0 +1,48 @@
+module ReturnTypesDemo;
+
+class Calculator
+  integer result;
+  
+  // Procedure - no return value
+  procedure add(integer a, integer b)
+  begin
+    result = a + b;
+  end;
+  
+  // Function - returns integer
+  function getResult : integer
+  begin
+    return result;
+  end;
+  
+  // Function - returns string
+  function getResultAsString : string
+  begin
+    return "Result: " + result;
+  end;
+end;
+
+class App
+  procedure Main
+  begin
+    writeln('=== Return Types Demo ===');
+    
+    Calculator calc;
+    calc = new Calculator();
+    
+    // Call procedure (no return value)
+    calc.add(10, 5);
+    
+    // Call function that returns integer
+    integer result;
+    result = calc.getResult();
+    writeln('Integer result: ' + result);
+    
+    // Call function that returns string
+    string resultStr;
+    resultStr = calc.getResultAsString();
+    writeln('String result: ' + resultStr);
+    
+    writeln('Demo completed');
+  end;
+end;

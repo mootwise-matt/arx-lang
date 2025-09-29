@@ -25,6 +25,7 @@ typedef struct parser_context parser_context_t;
 bool parse_module(parser_context_t *context);
 ast_node_t* parse_class(parser_context_t *context);
 ast_node_t* parse_field(parser_context_t *context);
+ast_node_t* parse_parameter(parser_context_t *context);
 ast_node_t* parse_method(parser_context_t *context);
 bool parse_statement(parser_context_t *context);
 ast_node_t* parse_statement_ast(parser_context_t *context);

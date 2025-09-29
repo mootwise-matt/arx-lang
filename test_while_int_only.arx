@@ -1,0 +1,18 @@
+module TestWhileIntOnly;
+
+class App
+  procedure Main
+  begin
+    writeln('Testing simple WHILE loop');
+    
+    integer counter;
+    counter = 5;
+    
+    while counter do
+    begin
+      counter = counter - 1;
+    end;
+    
+    writeln('WHILE loop completed');
+  end;
+end;

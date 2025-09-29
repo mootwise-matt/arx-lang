@@ -13,6 +13,14 @@ FieldDecl ::= Visibility? Ident ":" Type ";"
 MethodDecl ::= Visibility? (FunctionDecl | ProcedureDecl)
 ConstructorDecl ::= Visibility? "constructor" Ident ParamList ";"
 
+## Self References
+SelfRef ::= "self" [ "." ( FieldAccess | MethodCall ) ]
+FieldAccess ::= Ident
+- **self**: Refers to the current object instance within a method
+- **self.field**: Accesses a field of the current object
+- **self.method()**: Calls a method on the current object
+- **Scope**: Can only be used within class methods, not in standalone functions
+
 ## Functions & Procedures
 FnDecl ::= Visibility? "fn" Ident ParamList [ ":" Type ] Block
 FunctionDecl ::= "function" Ident ParamList ":" Type Block
@@ -51,7 +59,9 @@ RelOp ::= "==" | "!=" | "<" | "<=" | ">" | ">="
 AddExpr ::= MulExpr { ("+" | "-") MulExpr }
 MulExpr ::= Unary { ("" | "/" | "%") Unary }
 Unary ::= Primary | ("!" | "-" | "~") Unary
-Primary ::= Ident | Literal | "(" Expr ")" | MethodCall
-MethodCall ::= Ident "(" [ ArgList ] ")"
+Primary ::= Ident | Literal | "(" Expr ")" | MethodCall | SelfRef
+SelfRef ::= "self" [ "." ( FieldAccess | MethodCall ) ]
+FieldAccess ::= Ident
+MethodCall ::= Ident "(" [ ArgList ] ")" | SelfRef "(" [ ArgList ] ")"
 ArgList ::= Expr { "," Expr }
 

@@ -33,6 +33,7 @@ bool parse_array_literal(parser_context_t *context);
 ast_node_t* parse_number_literal(parser_context_t *context);
 ast_node_t* parse_string_literal(parser_context_t *context);
 ast_node_t* parse_identifier(parser_context_t *context);
+ast_node_t* parse_self_reference(parser_context_t *context);
 
 // Postfix and Method Call Functions
 ast_node_t* parse_postfix_operations(parser_context_t *context, char *base_name);

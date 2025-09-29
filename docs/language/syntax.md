@@ -36,16 +36,49 @@ end;
 - **Fields**: Data members with types (`TYPE field;`) ✅ Working
 - **Methods**: Functions and procedures ✅ Working
 - **Method Calls**: `obj.method()` ✅ Working
+- **Self References**: `self.field` and `self.method()` ✅ Working
 - **Encapsulation**: Fields are private - access only through methods ✅ Working
 - **Object Creation**: `new ClassName` ✅ Working
 - **Method Overriding**: Child classes can override parent methods ✅ Working
+
+### Self References
+ARX supports explicit self references within class methods to access the current object's fields and methods:
+
+- **Self Keyword**: `self` refers to the current object instance within a method
+- **Field Access**: `self.field` accesses the object's field
+- **Method Calls**: `self.method()` calls the object's method
+- **Scope Resolution**: `self` helps distinguish between local variables and class members
+- **Method Context Only**: `self` can only be used within class methods, not in standalone functions
+
+```arx
+class Person
+  string name;
+  integer age;
+  
+  procedure setName(string newName)
+  begin
+    self.name = newName;  // Access field through self
+  end;
+  
+  procedure greet()
+  begin
+    writeln("Hello, I'm " + self.name);  // Access field through self
+    self.haveBirthday();  // Call method through self
+  end;
+  
+  procedure haveBirthday()
+  begin
+    self.age = self.age + 1;  // Modify field through self
+  end;
+end;
+```
 
 ### Encapsulation Rules
 ARX enforces strict encapsulation for object-oriented programming:
 
 - **Private Fields**: All class fields are private and cannot be accessed directly from outside the class
 - **Method Access**: Fields can only be accessed through public methods (getters/setters)
-- **Internal Access**: Within a class, methods can access fields directly using field names
+- **Internal Access**: Within a class, methods can access fields directly using field names or `self.field`
 - **No Direct Field Access**: Expressions like `obj.field` are not allowed - use `obj.getField()` instead
 
 ```arx
@@ -90,6 +123,7 @@ end;
 - **Assignment**: `=` (C-style assignment) ✅ Working
 - **Object Creation**: `new ClassName` ✅ Working
 - **Method Calls**: `obj.method()` ✅ Working
+- **Self References**: `self.field` and `self.method()` ✅ Working
 - **String Concatenation**: `"Hello" + "World"` ✅ Working
 - **Parenthesized Expressions**: `(a + b) * c` ✅ Working
 

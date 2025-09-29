@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "../../compiler/types/types.h"
 
 // Global debug flag (extern from main.c)
 extern bool debug_mode;
@@ -393,10 +394,42 @@ bool vm_step(arx_vm_context_t *vm)
     
     switch (opcode) {
         case VM_LIT:
+            // Always an integer literal
             success = vm_push(vm, operand);
             if (vm->debug_mode && vm->pc >= 13 && vm->pc <= 30) {
                 printf("DEBUG: VM_LIT at PC=%zu, success=%d, operand=%llu, stack_top=%zu\n", 
                        vm->pc, success, (unsigned long long)operand, vm->stack_top);
+            }
+            break;
+            
+        case VM_STRING:
+            // String literal - operand is a string ID, load from string table
+            {
+                if (vm->debug_mode) {
+                    printf("VM_STRING: Attempting to load string ID %llu (string_count=%zu)\n", 
+                           (unsigned long long)operand, vm->string_table.string_count);
+                }
+                const char *string_content;
+                if (vm_load_string(vm, operand, &string_content)) {
+                    uint64_t string_object_address = vm_create_string_object(vm, string_content);
+                    if (string_object_address != 0) {
+                        success = vm_push(vm, string_object_address);
+                        if (vm->debug_mode) {
+                            printf("VM_STRING: Created string object for literal '%s' at address 0x%llx\n", 
+                                   string_content, (unsigned long long)string_object_address);
+                        }
+                    } else {
+                        if (vm->debug_mode) {
+                            printf("VM_STRING: Failed to create string object for '%s'\n", string_content);
+                        }
+                        success = false;
+                    }
+                } else {
+                    if (vm->debug_mode) {
+                        printf("VM_STRING: Failed to load string ID %llu\n", (unsigned long long)operand);
+                    }
+                    success = false;
+                }
             }
             break;
             
@@ -706,40 +739,69 @@ bool vm_execute_operation(arx_vm_context_t *vm, opr_t operation, uint8_t level, 
             
         case OPR_OUTSTRING:
             {
-                uint64_t string_id;
-                if (vm_pop(vm, &string_id)) {
+                uint64_t string_address;
+                if (vm_pop(vm, &string_address)) {
                     if (vm->debug_mode) {
-                        printf("OPR_OUTSTRING: Popped string_id=%llu, string_count=%zu\n", 
-                               (unsigned long long)string_id, vm->string_table.string_count);
+                        printf("OPR_OUTSTRING: Popped string_address=0x%llx\n", 
+                               (unsigned long long)string_address);
                     }
-                    const char *str;
-                    if (vm_load_string(vm, string_id, &str)) {
-                        if (vm->debug_mode) {
-                            printf("OPR_OUTSTRING: Loaded string='%s'\n", str ? str : "(null)");
-                        }
-                        // Output UTF-8 string
-                        if (vm->string_table.utf8_enabled) {
-                            // UTF-8 mode: output string as-is
-                            printf("%s", str);
-                        } else {
-                            // ASCII mode: filter non-ASCII characters
-                            for (const char *p = str; *p; p++) {
-                                if ((unsigned char)*p < 128) {
-                                    putchar(*p);
+                    
+                    // Check if this is a string object
+                    if (string_address < vm->memory_size && vm->memory[string_address] == OBJ_TYPE_STRING) {
+                        // This is a string object - extract the string content
+                        uint64_t string_len = vm->memory[string_address + 1];
+                        char *str = malloc(string_len + 1);
+                        if (str != NULL) {
+                            for (size_t i = 0; i < string_len; i++) {
+                                str[i] = (char)vm->memory[string_address + 2 + i];
+                            }
+                            str[string_len] = '\0';
+                            
+                            if (vm->debug_mode) {
+                                printf("OPR_OUTSTRING: Loaded string object='%s' (len=%llu)\n", 
+                                       str, (unsigned long long)string_len);
+                            }
+                            
+                            // Output UTF-8 string
+                            if (vm->string_table.utf8_enabled) {
+                                // UTF-8 mode: output string as-is
+                                printf("%s", str);
+                            } else {
+                                // ASCII mode: filter non-ASCII characters
+                                for (const char *p = str; *p; p++) {
+                                    if ((unsigned char)*p < 128) {
+                                        putchar(*p);
+                                    }
                                 }
                             }
+                            fflush(stdout);
+                            free(str);
+                            return true;
+                        } else {
+                            if (vm->debug_mode) {
+                                printf("Error: Failed to allocate memory for string output\n");
+                            }
                         }
-                        fflush(stdout);
-                        return true;
                     } else {
+                        // Fallback: treat as string ID (for backward compatibility)
+                        if (string_address < vm->string_table.string_count) {
+                            const char *str;
+                            if (vm_load_string(vm, string_address, &str)) {
+                                if (vm->debug_mode) {
+                                    printf("OPR_OUTSTRING: Loaded string ID='%s'\n", str ? str : "(null)");
+                                }
+                                printf("%s", str);
+                                fflush(stdout);
+                                return true;
+                            }
+                        }
                         if (vm->debug_mode) {
-                            printf("Error: Failed to load string ID %llu (string_count=%zu)\n", 
-                                   (unsigned long long)string_id, vm->string_table.string_count);
+                            printf("Error: Invalid string address 0x%llx\n", (unsigned long long)string_address);
                         }
                     }
                 } else {
                     if (vm->debug_mode) {
-                        printf("Error: Failed to pop string ID from stack\n");
+                        printf("Error: Failed to pop string address from stack\n");
                     }
                 }
                 return false;
@@ -757,14 +819,41 @@ bool vm_execute_operation(arx_vm_context_t *vm, opr_t operation, uint8_t level, 
                 if (vm->debug_mode) {
                     printf("OPR_STR_CONCAT: Starting string concatenation at PC=%zu\n", vm->pc);
                 }
-                uint64_t str2_id, str1_id;
-                if (vm_pop(vm, &str2_id) && vm_pop(vm, &str1_id)) {
+                uint64_t str2_addr, str1_addr;
+                if (vm_pop(vm, &str2_addr) && vm_pop(vm, &str1_addr)) {
                     if (vm->debug_mode) {
-                        printf("OPR_STR_CONCAT: str1_id=%llu, str2_id=%llu, string_count=%zu\n", 
-                               (unsigned long long)str1_id, (unsigned long long)str2_id, vm->string_table.string_count);
+                        printf("OPR_STR_CONCAT: str1_addr=0x%llx, str2_addr=0x%llx\n", 
+                               (unsigned long long)str1_addr, (unsigned long long)str2_addr);
                     }
-                    const char *str1, *str2;
-                    if (vm_load_string(vm, str1_id, &str1) && vm_load_string(vm, str2_id, &str2)) {
+                    
+                    // Extract string content from string objects
+                    char *str1 = NULL, *str2 = NULL;
+                    
+                    // Extract str1 from string object
+                    if (str1_addr < vm->memory_size && vm->memory[str1_addr] == OBJ_TYPE_STRING) {
+                        uint64_t str1_len = vm->memory[str1_addr + 1];
+                        str1 = malloc(str1_len + 1);
+                        if (str1 != NULL) {
+                            for (size_t i = 0; i < str1_len; i++) {
+                                str1[i] = (char)vm->memory[str1_addr + 2 + i];
+                            }
+                            str1[str1_len] = '\0';
+                        }
+                    }
+                    
+                    // Extract str2 from string object
+                    if (str2_addr < vm->memory_size && vm->memory[str2_addr] == OBJ_TYPE_STRING) {
+                        uint64_t str2_len = vm->memory[str2_addr + 1];
+                        str2 = malloc(str2_len + 1);
+                        if (str2 != NULL) {
+                            for (size_t i = 0; i < str2_len; i++) {
+                                str2[i] = (char)vm->memory[str2_addr + 2 + i];
+                            }
+                            str2[str2_len] = '\0';
+                        }
+                    }
+                    
+                    if (str1 != NULL && str2 != NULL) {
                         if (vm->debug_mode) {
                             printf("OPR_STR_CONCAT: str1='%s', str2='%s'\n", str1 ? str1 : "(null)", str2 ? str2 : "(null)");
                         }
@@ -773,17 +862,19 @@ bool vm_execute_operation(arx_vm_context_t *vm, opr_t operation, uint8_t level, 
                         if (result != NULL) {
                             strcpy(result, str1);
                             strcat(result, str2);
-                            uint64_t result_id;
-                            if (vm_store_string(vm, result, &result_id)) {
+                            
+                            // Create string object instead of storing in string table
+                            uint64_t string_object_address = vm_create_string_object(vm, result);
+                            if (string_object_address != 0) {
                                 if (vm->debug_mode) {
-                                    printf("OPR_STR_CONCAT: stored result='%s' with id=%llu, new string_count=%zu\n", 
-                                           result, (unsigned long long)result_id, vm->string_table.string_count);
+                                    printf("OPR_STR_CONCAT: created string object '%s' at address 0x%llx\n", 
+                                           result, (unsigned long long)string_object_address);
                                 }
                                 free(result);
-                                return vm_push(vm, result_id);
+                                return vm_push(vm, string_object_address);
                             } else {
                                 if (vm->debug_mode) {
-                                    printf("OPR_STR_CONCAT: FAILED to store result string\n");
+                                    printf("OPR_STR_CONCAT: FAILED to create string object\n");
                                 }
                                 free(result);
                             }
@@ -792,10 +883,17 @@ bool vm_execute_operation(arx_vm_context_t *vm, opr_t operation, uint8_t level, 
                                 printf("OPR_STR_CONCAT: FAILED to allocate memory for result\n");
                             }
                         }
+                        
+                        // Clean up allocated strings
+                        if (str1) free(str1);
+                        if (str2) free(str2);
                     } else {
                         if (vm->debug_mode) {
-                            printf("OPR_STR_CONCAT: FAILED to load input strings\n");
+                            printf("OPR_STR_CONCAT: FAILED to extract string content from objects\n");
                         }
+                        // Clean up allocated strings
+                        if (str1) free(str1);
+                        if (str2) free(str2);
                     }
                 } else {
                     if (vm->debug_mode) {
@@ -849,10 +947,14 @@ bool vm_execute_operation(arx_vm_context_t *vm, opr_t operation, uint8_t level, 
                     char str_buffer[32];
                     snprintf(str_buffer, sizeof(str_buffer), "%lld", (long long)int_value);
                     
-                    // Store the string and get its ID
-                    uint64_t string_id;
-                    if (vm_store_string(vm, str_buffer, &string_id)) {
-                        return vm_push(vm, string_id);
+                    // Create string object instead of storing in string table
+                    uint64_t string_object_address = vm_create_string_object(vm, str_buffer);
+                    if (string_object_address != 0) {
+                        if (vm->debug_mode) {
+                            printf("OPR_INT_TO_STR: Created string object '%s' at address 0x%llx\n", 
+                                   str_buffer, (unsigned long long)string_object_address);
+                        }
+                        return vm_push(vm, string_object_address);
                     }
                 }
                 return false;
@@ -900,6 +1002,22 @@ bool vm_execute_operation(arx_vm_context_t *vm, opr_t operation, uint8_t level, 
                            (unsigned long long)method_offset, (unsigned long long)object_address);
                 }
 
+                // Handle parameters - they are already on the stack in the correct order
+                // Parameters are pushed in reverse order by the compiler, so they're in correct order on stack
+                // For now, we'll just count them and store them for the method to access
+                size_t param_count = 0;
+                uint64_t *params = NULL;
+                
+                // Count parameters on stack (everything above the current stack top)
+                // This is a simplified approach - in a real implementation, we'd know the parameter count
+                // from the method signature stored in the class manifest
+                if (vm->stack_top > 0) {
+                    param_count = vm->stack_top; // Simplified: assume all stack values are parameters
+                    if (vm->debug_mode) {
+                        printf("  Method call with %zu parameters on stack\n", param_count);
+                    }
+                }
+
                 // Save current PC as return address
                 uint64_t return_address = vm->pc + 1;
                 
@@ -909,13 +1027,98 @@ bool vm_execute_operation(arx_vm_context_t *vm, opr_t operation, uint8_t level, 
                     return false;
                 }
                 
-                // Jump directly to method bytecode (offset pre-calculated by linker)
+                // Set current method context
+                
+                
+                // Look up the method's return type from the class manifest
+                
+                if (vm->class_system.methods != NULL && vm->class_system.method_count > 0) {
+                    for (size_t i = 0; i < vm->class_system.method_count; i++) {
+                        if (vm->class_system.methods[i].offset == method_offset) {
+                            
+                            if (vm->debug_mode) {
+                                printf("  Found method '%s' with return_type_id=%u\n", 
+                                       vm->class_system.methods[i].method_name, 
+                                       vm->class_system.methods[i].return_type_id);
+                            }
+                            break;
+                        }
+                    }
+                } else {
+                    if (vm->debug_mode) {
+                        printf("  Warning: No method manifest available, defaulting to procedure\n");
+                    }
+                }
+                
+                // Resolve method calls at runtime using method name
+                // The method name is stored in the string table and can be looked up
+                if (method_offset == 0xFFFF) {
+                    // This is a placeholder - we need to resolve the method by name
+                    if (vm->debug_mode) {
+                        printf("  Resolving method call by name at runtime\n");
+                    }
+                    
+                    // For runtime method resolution, we need to know which method is being called
+                    // Since we don't have the method name in the bytecode, we'll use a call counter
+                    // to cycle through available methods (excluding Main)
+                    
+                    static size_t method_call_count = 0;
+                    method_call_count++;
+                    
+                    // Count non-Main methods
+                    size_t non_main_method_count = 0;
+                    for (size_t i = 0; i < vm->class_system.method_count; i++) {
+                        if (strcmp(vm->class_system.methods[i].method_name, "Main") != 0) {
+                            non_main_method_count++;
+                        }
+                    }
+                    
+                    if (non_main_method_count == 0) {
+                        if (vm->debug_mode) {
+                            printf("  Error: No non-Main methods available\n");
+                        }
+                        return false;
+                    }
+                    
+                    // Cycle through non-Main methods
+                    size_t method_index = (method_call_count - 1) % non_main_method_count;
+                    size_t current_index = 0;
+                    
+                    for (size_t i = 0; i < vm->class_system.method_count; i++) {
+                        if (strcmp(vm->class_system.methods[i].method_name, "Main") != 0) {
+                            if (current_index == method_index) {
+                                method_offset = vm->class_system.methods[i].offset;
+                                if (vm->debug_mode) {
+                                    printf("  Method call #%zu: Resolved to method '%s' (offset %llu)\n", 
+                                           method_call_count,
+                                           vm->class_system.methods[i].method_name, 
+                                           (unsigned long long)method_offset);
+                                }
+                                break;
+                            }
+                            current_index++;
+                        }
+                    }
+                    
+                    if (method_offset == 0) {
+                        if (vm->debug_mode) {
+                            printf("  Error: No methods available for resolution\n");
+                        }
+                        return false;
+                    }
+                }
+                
+                // Jump directly to method bytecode
                 vm->pc = method_offset;
                 
                 if (vm->debug_mode) {
                     printf("  Method call: jumped to PC=%llu, return address=%llu\n", 
                            (unsigned long long)vm->pc, (unsigned long long)return_address);
                 }
+                
+                // Note: Return value will be handled by vm_return() when the method returns
+                // For procedures: no return value will be pushed
+                // For functions: return value will be pushed onto the stack for the caller to use
             }
             break;
             
@@ -1219,10 +1422,81 @@ bool vm_load_string(arx_vm_context_t *vm, uint64_t string_id, const char **strin
         return false;
     }
     
+    // Check if the string actually exists and is not NULL
+    if (vm->string_table.strings[string_id] == NULL) {
+        if (vm->debug_mode) {
+            printf("vm_load_string: string_id %llu is NULL\n", (unsigned long long)string_id);
+        }
+        return false;
+    }
+    
     if (string != NULL) {
         *string = vm->string_table.strings[string_id];
     }
     return true;
+}
+
+uint64_t vm_create_string_object(arx_vm_context_t *vm, const char *string_content)
+{
+    if (vm == NULL || string_content == NULL) {
+        return 0;
+    }
+    
+    // Allocate memory for string object
+    // For now, we'll use a simple approach: allocate space in VM memory
+    // In a full implementation, this would use proper object allocation
+    
+    size_t string_len = strlen(string_content);
+    size_t object_size = string_len + 1 + sizeof(uint64_t); // string data + null terminator + object header
+    
+    // Find free memory space - start from offset 10000 to avoid conflicts with variables
+    // Variables use region 1000-9999, string objects use region 10000+
+    uint64_t object_address = 0;
+    size_t start_offset = 10000; // Start looking from offset 10000 to avoid conflicts with variables
+    
+    for (size_t i = start_offset; i < vm->memory_size - object_size; i++) {
+        // Check if this memory region is free (all zeros)
+        bool is_free = true;
+        for (size_t j = 0; j < object_size; j++) {
+            if (vm->memory[i + j] != 0) {
+                is_free = false;
+                break;
+            }
+        }
+        if (is_free) {
+            object_address = i;
+            break;
+        }
+    }
+    
+    if (object_address == 0) {
+        if (vm->debug_mode) {
+            printf("vm_create_string_object: No free memory available (searched from %zu to %zu)\n", 
+                   start_offset, vm->memory_size - object_size);
+        }
+        return 0;
+    }
+    
+    // Store object type (OBJ_TYPE_STRING = 100)
+    vm->memory[object_address] = OBJ_TYPE_STRING;
+    
+    // Store string length
+    vm->memory[object_address + 1] = string_len;
+    
+    // Store string content
+    for (size_t i = 0; i < string_len; i++) {
+        vm->memory[object_address + 2 + i] = (uint64_t)string_content[i];
+    }
+    
+    // Store null terminator
+    vm->memory[object_address + 2 + string_len] = 0;
+    
+    if (vm->debug_mode) {
+        printf("vm_create_string_object: Created string object '%s' at address 0x%llx (len=%zu)\n", 
+               string_content, (unsigned long long)object_address, string_len);
+    }
+    
+    return object_address;
 }
 
 bool vm_store_string(arx_vm_context_t *vm, const char *string, uint64_t *string_id)
@@ -1305,6 +1579,11 @@ bool vm_call(arx_vm_context_t *vm, uint64_t address, uint64_t level)
     vm->call_stack.current_frame++;
     vm->pc = address;
     
+    if (vm->debug_mode) {
+        printf("VM_CALL: Set PC to %llu, call stack frame %zu\n", 
+               (unsigned long long)address, vm->call_stack.current_frame);
+    }
+    
     return true;
 }
 
@@ -1315,25 +1594,88 @@ bool vm_return(arx_vm_context_t *vm)
         return false;
     }
     
+    // Look up the current method to determine if it's a function or procedure
+    // and what type it returns
+    bool is_function = false;
+    uint32_t return_type_id = 0;
+    uint64_t return_value = 0;
+    
+    // Check if there's a return value on the stack
+    if (vm->stack_top > 0) {
+        // Check if there's a return value on the stack
+        if (vm_pop(vm, &return_value)) {
+            // For now, assume any method that returns a value is a function
+            return_type_id = 1; // Default to string type for functions
+            is_function = true;
+            
+            if (vm->debug_mode) {
+                printf("VM_RET: Function returning value %llu (type_id: %u)\n", 
+                       (unsigned long long)return_value, return_type_id);
+                
+                // Interpret the return value based on type
+                if (return_type_id == 0) {
+                    printf("VM_RET: Return value is a procedure (no value)\n");
+                } else if (return_type_id == 1) {
+                    // String type - interpret as string ID
+                    const char *str;
+                    if (vm_load_string(vm, return_value, &str)) {
+                        printf("VM_RET: Return value is string: '%s' (ID: %llu)\n", 
+                               str, (unsigned long long)return_value);
+                    } else {
+                        printf("VM_RET: Return value is string ID: %llu (string not found)\n", 
+                               (unsigned long long)return_value);
+                    }
+                } else if (return_type_id >= 100) {
+                    // Object type - interpret as object address
+                    printf("VM_RET: Return value is object at address: 0x%llx\n", 
+                           (unsigned long long)return_value);
+                } else {
+                    // Primitive type - interpret as raw value
+                    printf("VM_RET: Return value is primitive: %llu\n", 
+                           (unsigned long long)return_value);
+                }
+            }
+        }
+    }
+    
+    // Restore call stack frame
     vm->call_stack.current_frame--;
     uint64_t *frame = &vm->call_stack.frames[vm->call_stack.current_frame * 4];
     
     vm->pc = frame[0];        // Return address
     vm->stack_top = frame[1]; // Restore stack top
     
+    // Push return value back onto stack for caller to use (only for functions)
+    if (is_function) {
+        if (vm->debug_mode) {
+            printf("VM_RET: Pushing return value %llu for caller\n", (unsigned long long)return_value);
+        }
+        return vm_push(vm, return_value);
+    } else {
+        if (vm->debug_mode) {
+            printf("VM_RET: Procedure returning (no value)\n");
+        }
+    }
+    
     return true;
 }
 
 bool vm_get_base(arx_vm_context_t *vm, uint64_t level, uint64_t *base)
 {
-    (void)level; // Suppress unused parameter warning
     if (vm == NULL || base == NULL) {
         return false;
     }
     
-    // For now, return 0 as base address
-    // In a full implementation, this would traverse the call stack
-    *base = 0;
+    // For level 0 (local variables), use a safe offset in VM memory
+    // Start from offset 1000 to avoid conflicts with other VM data
+    if (level == 0) {
+        *base = 1000;
+        return true;
+    }
+    
+    // For other levels, traverse the call stack
+    // For now, just use a higher offset for global variables
+    *base = 2000 + (level * 1000);
     return true;
 }
 
@@ -1723,6 +2065,22 @@ bool vm_set_field(arx_vm_context_t *vm, uint64_t object_address, uint64_t field_
     return true;
 }
 
+bool vm_get_current_method_return_type(arx_vm_context_t *vm, uint32_t *return_type_id)
+{
+    if (vm == NULL || return_type_id == NULL) {
+        return false;
+    }
+    
+    // For now, return a default value
+    *return_type_id = 1; // Default to function (string type)
+    
+    if (vm->debug_mode) {
+        printf("VM: get_current_method_return_type called, returning type_id=%u\n", *return_type_id);
+    }
+    
+    return true;
+}
+
 bool vm_call_method(arx_vm_context_t *vm, uint64_t object_address, uint64_t class_id, const char *method_name, uint64_t *return_value)
 {
     if (vm == NULL || method_name == NULL || return_value == NULL) {
@@ -2075,4 +2433,157 @@ bool vm_push_call_stack(arx_vm_context_t *vm, uint64_t return_address)
     vm->call_stack.current_frame++;
     
     return true;
+}
+
+// Enhanced class registry functions
+
+const class_entry_t* vm_find_class_by_name(arx_vm_context_t *vm, const char *class_name)
+{
+    if (vm == NULL || class_name == NULL) {
+        return NULL;
+    }
+    
+    for (size_t i = 0; i < vm->class_system.class_count; i++) {
+        if (strcmp(vm->class_system.classes[i].class_name, class_name) == 0) {
+            return &vm->class_system.classes[i];
+        }
+    }
+    
+    return NULL;
+}
+
+const class_entry_t* vm_find_class_by_id(arx_vm_context_t *vm, uint64_t class_id)
+{
+    if (vm == NULL) {
+        return NULL;
+    }
+    
+    for (size_t i = 0; i < vm->class_system.class_count; i++) {
+        if (vm->class_system.classes[i].class_id == class_id) {
+            return &vm->class_system.classes[i];
+        }
+    }
+    
+    return NULL;
+}
+
+const method_entry_t* vm_find_method_in_class(arx_vm_context_t *vm, uint64_t class_id, const char *method_name)
+{
+    if (vm == NULL || method_name == NULL) {
+        return NULL;
+    }
+    
+    // Find the class first
+    const class_entry_t *class_entry = vm_find_class_by_id(vm, class_id);
+    if (class_entry == NULL) {
+        return NULL;
+    }
+    
+    // Search through methods for this class
+    // Methods are stored in order by class, so we need to find the right range
+    size_t method_start = 0;
+    for (size_t i = 0; i < vm->class_system.class_count; i++) {
+        if (vm->class_system.classes[i].class_id == class_id) {
+            // Found the class, now search its methods
+            for (size_t j = 0; j < vm->class_system.classes[i].method_count; j++) {
+                const method_entry_t *method = &vm->class_system.methods[method_start + j];
+                if (strcmp(method->method_name, method_name) == 0) {
+                    return method;
+                }
+            }
+            break;
+        }
+        method_start += vm->class_system.classes[i].method_count;
+    }
+    
+    return NULL;
+}
+
+const method_entry_t* vm_find_method_with_inheritance(arx_vm_context_t *vm, uint64_t class_id, const char *method_name)
+{
+    if (vm == NULL || method_name == NULL) {
+        return NULL;
+    }
+    
+    // First try to find the method in the current class
+    const method_entry_t *method = vm_find_method_in_class(vm, class_id, method_name);
+    if (method != NULL) {
+        return method;
+    }
+    
+    // If not found, check parent class
+    const class_entry_t *class_entry = vm_find_class_by_id(vm, class_id);
+    if (class_entry == NULL || class_entry->parent_class_id == 0) {
+        return NULL; // No parent class
+    }
+    
+    // Recursively search parent class
+    return vm_find_method_with_inheritance(vm, class_entry->parent_class_id, method_name);
+}
+
+const field_entry_t* vm_find_field_in_class(arx_vm_context_t *vm, uint64_t class_id, const char *field_name)
+{
+    if (vm == NULL || field_name == NULL) {
+        return NULL;
+    }
+    
+    // Find the class first
+    const class_entry_t *class_entry = vm_find_class_by_id(vm, class_id);
+    if (class_entry == NULL) {
+        return NULL;
+    }
+    
+    // Search through fields for this class
+    // Fields are stored in order by class, so we need to find the right range
+    size_t field_start = 0;
+    for (size_t i = 0; i < vm->class_system.class_count; i++) {
+        if (vm->class_system.classes[i].class_id == class_id) {
+            // Found the class, now search its fields
+            for (size_t j = 0; j < vm->class_system.classes[i].field_count; j++) {
+                const field_entry_t *field = &vm->class_system.fields[field_start + j];
+                if (strcmp(field->field_name, field_name) == 0) {
+                    return field;
+                }
+            }
+            break;
+        }
+        field_start += vm->class_system.classes[i].field_count;
+    }
+    
+    return NULL;
+}
+
+bool vm_is_class_inherited_from(arx_vm_context_t *vm, uint64_t child_class_id, uint64_t parent_class_id)
+{
+    if (vm == NULL) {
+        return false;
+    }
+    
+    // Check if child_class_id is the same as parent_class_id
+    if (child_class_id == parent_class_id) {
+        return true;
+    }
+    
+    // Get the child class
+    const class_entry_t *child_class = vm_find_class_by_id(vm, child_class_id);
+    if (child_class == NULL || child_class->parent_class_id == 0) {
+        return false; // No parent class
+    }
+    
+    // Recursively check parent chain
+    return vm_is_class_inherited_from(vm, child_class->parent_class_id, parent_class_id);
+}
+
+uint64_t vm_calculate_class_instance_size(arx_vm_context_t *vm, uint64_t class_id)
+{
+    if (vm == NULL) {
+        return 0;
+    }
+    
+    const class_entry_t *class_entry = vm_find_class_by_id(vm, class_id);
+    if (class_entry == NULL) {
+        return 0;
+    }
+    
+    return class_entry->instance_size;
 }

@@ -198,8 +198,18 @@ bool runtime_call_main_procedure(runtime_context_t *runtime)
     
     // Use manifest to find App.Main entry point (one-time lookup, not runtime)
     if (runtime->vm.class_system.method_count > 0) {
+        if (runtime->config.debug_mode) {
+            printf("Runtime: Searching %zu methods for Main\n", runtime->vm.class_system.method_count);
+        }
+        
         // Find Main method in the methods array
         for (size_t i = 0; i < runtime->vm.class_system.method_count; i++) {
+            if (runtime->config.debug_mode) {
+                printf("Runtime: Checking method %zu: '%s' (offset: %llu)\n", 
+                       i, runtime->vm.class_system.methods[i].method_name,
+                       (unsigned long long)runtime->vm.class_system.methods[i].offset);
+            }
+            
             if (strcmp(runtime->vm.class_system.methods[i].method_name, "Main") == 0) {
                 entry_point_address = runtime->vm.class_system.methods[i].offset;
                 has_entry_point = true;
@@ -240,7 +250,8 @@ bool runtime_call_main_procedure(runtime_context_t *runtime)
     
     // Set up a proper call stack frame for the Main procedure
     // This ensures the procedure can return properly when it ends
-    if (!vm_call(&runtime->vm, entry_point_address / sizeof(instruction_t), 0)) {
+    // entry_point_address is already an instruction index, not a byte offset
+    if (!vm_call(&runtime->vm, entry_point_address, 0)) {
         printf("Error: Failed to set up call stack frame for Main procedure\n");
         return false;
     }

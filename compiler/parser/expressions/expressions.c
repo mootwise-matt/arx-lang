@@ -249,12 +249,24 @@ bool parse_relational(parser_context_t *context)
 
 ast_node_t* parse_additive(parser_context_t *context)
 {
+    if (debug_mode) {
+        printf("parse_additive: Starting with token %d\n", context->lexer->token);
+    }
+    
     ast_node_t *left = parse_multiplicative(context);
     if (!left) {
         return NULL;
     }
     
+    if (debug_mode) {
+        printf("parse_additive: After parse_multiplicative, token is %d, checking for PLUS (%d) or MINUS\n", 
+               context->lexer->token, TOK_PLUS);
+    }
+    
     while (match_token(context, TOK_PLUS) || match_token(context, TOK_MINUS)) {
+        if (debug_mode) {
+            printf("parse_additive: Found PLUS or MINUS token, creating AST_BINARY_OP\n");
+        }
         // Create binary operation node
         ast_node_t *op_node = ast_create_node(AST_BINARY_OP);
         if (!op_node) {
@@ -398,6 +410,10 @@ ast_node_t* parse_primary(parser_context_t *context)
             
         case TOK_IDENT:
             node = parse_identifier(context);
+            break;
+            
+        case TOK_SELF:
+            node = parse_self_reference(context);
             break;
             
         case TOK_NEW:
@@ -604,9 +620,54 @@ ast_node_t* parse_identifier(parser_context_t *context)
         }
     }
     
+    
     // No postfix operations, just return the identifier node
     return node;
 }
+
+ast_node_t* parse_self_reference(parser_context_t *context)
+{
+    if (debug_mode) {
+        printf("Parsing self reference\n");
+    }
+    
+    // Create AST node for self
+    ast_node_t *node = ast_create_node(AST_SELF);
+    if (!node) {
+        if (debug_mode) {
+            printf("Failed to create AST node for self\n");
+        }
+        return NULL;
+    }
+    
+    // Set value to "self"
+    ast_set_value(node, "self");
+    
+    if (!advance_token(context)) {
+        if (debug_mode) {
+            printf("Failed to advance token after self\n");
+        }
+        ast_destroy_node(node);
+        return NULL;
+    }
+    
+    // Check for postfix operations (dot operator, method calls)
+    char *base_name = strdup("self");
+    if (base_name) {
+        ast_node_t *postfix_result = parse_postfix_operations(context, base_name);
+        if (postfix_result) {
+            ast_destroy_node(node);
+            return postfix_result;
+        }
+    }
+    
+    if (debug_mode) {
+        printf("Created AST node for self reference\n");
+    }
+    
+    return node;
+}
+
 ast_node_t* parse_postfix_operations(parser_context_t *context, char *base_name)
 {
     if (context == NULL || base_name == NULL) {
@@ -620,7 +681,72 @@ ast_node_t* parse_postfix_operations(parser_context_t *context, char *base_name)
     
     // Check for method call (parentheses)
     if (match_token(context, TOK_LPAREN)) {
-        return parse_method_call_expression(context, base_name, NULL);
+        // This is a standalone method call, not an object method call
+        if (debug_mode) {
+            printf("Found standalone method call: %s()\n", base_name);
+        }
+        
+        // Create method call AST node
+        ast_node_t *method_call = ast_create_node(AST_METHOD_CALL);
+        if (!method_call) {
+            free(base_name);
+            return NULL;
+        }
+        
+        // Set the method call info
+        char *call_info = malloc(strlen(base_name) + 3);
+        if (call_info) {
+            snprintf(call_info, strlen(base_name) + 3, "%s()", base_name);
+            ast_set_value(method_call, call_info);
+            free(call_info);
+        }
+        
+        // Consume opening parenthesis
+        if (!advance_token(context)) {
+            free(base_name);
+            ast_destroy_node(method_call);
+            return NULL;
+        }
+        
+        // Parse parameters
+        int param_count = 0;
+        while (context->lexer->token != TOK_RPAREN && context->lexer->token != TOK_EOF) {
+            ast_node_t *param = parse_expression(context);
+            if (param) {
+                ast_add_child(method_call, param);
+                param_count++;
+            }
+            
+            // Check for comma separator
+            if (context->lexer->token == TOK_COMMA) {
+                if (!advance_token(context)) {
+                    free(base_name);
+                    ast_destroy_node(method_call);
+                    return NULL;
+                }
+            }
+        }
+        
+        // Expect closing parenthesis
+        if (!match_token(context, TOK_RPAREN)) {
+            parser_error(context, "Expected closing parenthesis");
+            free(base_name);
+            ast_destroy_node(method_call);
+            return NULL;
+        }
+        
+        if (!advance_token(context)) {
+            free(base_name);
+            ast_destroy_node(method_call);
+            return NULL;
+        }
+        
+        if (debug_mode) {
+            printf("Standalone method call parsed: %s with %d parameters\n", base_name, param_count);
+        }
+        
+        free(base_name);
+        return method_call;
     }
     
     // No postfix operations, just a simple identifier

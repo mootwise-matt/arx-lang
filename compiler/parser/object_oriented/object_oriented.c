@@ -292,6 +292,90 @@ ast_node_t* parse_field(parser_context_t *context)
     return field;
 }
 
+ast_node_t* parse_parameter(parser_context_t *context)
+{
+    if (debug_mode) {
+        printf("Parsing parameter\n");
+    }
+    
+    // Create parameter node
+    ast_node_t *param = ast_create_node(AST_PARAMETER);
+    if (param == NULL) {
+        parser_error(context, "Failed to create parameter node");
+        return NULL;
+    }
+    
+    // Parse parameter type
+    if (context->lexer->token != TOK_IDENT && 
+        context->lexer->token != TOK_INTEGER && 
+        context->lexer->token != TOK_BOOLEAN && 
+        context->lexer->token != TOK_CHAR && 
+        context->lexer->token != TOK_STRING && 
+        context->lexer->token != TOK_ARRAY) {
+        parser_error(context, "Expected parameter type");
+        ast_destroy_node(param);
+        return NULL;
+    }
+    
+    // Store parameter type
+    char *type_name = malloc(context->lexer->toklen + 1);
+    if (type_name == NULL) {
+        parser_error(context, "Failed to allocate memory for parameter type");
+        ast_destroy_node(param);
+        return NULL;
+    }
+    strncpy(type_name, context->lexer->tokstart, context->lexer->toklen);
+    type_name[context->lexer->toklen] = '\0';
+    
+    // Set type as first child
+    ast_node_t *type_node = ast_create_node(AST_IDENTIFIER);
+    if (type_node == NULL) {
+        free(type_name);
+        ast_destroy_node(param);
+        return NULL;
+    }
+    ast_set_value(type_node, type_name);
+    ast_add_child(param, type_node);
+    free(type_name);
+    
+    if (!advance_token(context)) {
+        ast_destroy_node(param);
+        return NULL;
+    }
+    
+    // Parse parameter name
+    if (context->lexer->token != TOK_IDENT) {
+        parser_error(context, "Expected parameter name");
+        ast_destroy_node(param);
+        return NULL;
+    }
+    
+    // Store parameter name
+    char *param_name = malloc(context->lexer->toklen + 1);
+    if (param_name == NULL) {
+        parser_error(context, "Failed to allocate memory for parameter name");
+        ast_destroy_node(param);
+        return NULL;
+    }
+    strncpy(param_name, context->lexer->tokstart, context->lexer->toklen);
+    param_name[context->lexer->toklen] = '\0';
+    
+    // Set parameter name as value
+    ast_set_value(param, param_name);
+    free(param_name);
+    
+    if (!advance_token(context)) {
+        ast_destroy_node(param);
+        return NULL;
+    }
+    
+    if (debug_mode) {
+        printf("Parameter parsed: %s %s\n", type_name, param_name);
+    }
+    
+    return param;
+}
+
 ast_node_t* parse_method(parser_context_t *context)
 {
     if (debug_mode) {
@@ -347,16 +431,25 @@ ast_node_t* parse_method(parser_context_t *context)
         return NULL;
     }
     
-    // Parse parameters (simplified - just skip for now)
+    // Parse parameters
     if (context->lexer->token == TOK_LPAREN) {
         if (!advance_token(context)) {
             return false;
         }
         
-        // Skip parameters for now
+        // Parse parameter list
         while (context->lexer->token != TOK_RPAREN && context->lexer->token != TOK_EOF) {
-            if (!advance_token(context)) {
-                return false;
+            ast_node_t *param = parse_parameter(context);
+            if (param == NULL) {
+                return NULL;
+            }
+            ast_add_child(method, param);
+            
+            // Check for comma separator
+            if (context->lexer->token == TOK_COMMA) {
+                if (!advance_token(context)) {
+                    return false;
+                }
             }
         }
         

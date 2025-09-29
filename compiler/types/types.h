@@ -29,9 +29,9 @@ typedef enum {
 // Object types
 typedef enum {
     OBJ_TYPE_NONE = 0,
-    OBJ_TYPE_STRING,
-    OBJ_TYPE_ARRAY,
-    OBJ_TYPE_CLASS
+    OBJ_TYPE_STRING = 100,
+    OBJ_TYPE_ARRAY = 101,
+    OBJ_TYPE_CLASS = 102
 } object_type_t;
 
 // Type information structure

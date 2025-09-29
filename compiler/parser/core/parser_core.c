@@ -197,6 +197,9 @@ bool parse_module(parser_context_t *context)
             }
         } else {
             // Unexpected token - try to advance and continue parsing
+            if (debug_mode) {
+                printf("DEBUG: Unexpected token in module parsing: %s\n", token_to_string(context->lexer->token));
+            }
             if (!advance_token(context)) {
                 break;
             }

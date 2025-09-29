@@ -77,7 +77,7 @@ class App
     writeln('(a > 0 && b > 0) || (c > 0) = ' + result + ' (should be 1)');
     
     result = (a > 10) || (b > 5 && c > 0);
-    writeln('(a > 10) || (b > 5 && c > 0) = ' + result + ' (should be 1)');
+    writeln('(a > 10) || (b > 5 && c > 0) = ' + result + ' (should be 0)');
     
     result = !(a > 0 && b > 0);
     writeln('!(a > 0 && b > 0) = ' + result + ' (should be 0)');

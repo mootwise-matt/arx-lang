@@ -115,6 +115,7 @@ bool vm_store(arx_vm_context_t *vm, uint64_t address, uint64_t value);
 // String operations
 bool vm_load_string(arx_vm_context_t *vm, uint64_t string_id, const char **string);
 bool vm_store_string(arx_vm_context_t *vm, const char *string, uint64_t *string_id);
+uint64_t vm_create_string_object(arx_vm_context_t *vm, const char *string_content);
 
 // Call stack operations
 bool vm_call(arx_vm_context_t *vm, uint64_t address, uint64_t level);
@@ -133,6 +134,7 @@ bool vm_get_method_offset(arx_vm_context_t *vm, uint64_t class_id, const char *m
 bool vm_access_field(arx_vm_context_t *vm, uint64_t object_address, uint64_t field_offset, uint64_t *value);
 bool vm_set_field(arx_vm_context_t *vm, uint64_t object_address, uint64_t field_offset, uint64_t value);
 bool vm_call_method(arx_vm_context_t *vm, uint64_t object_address, uint64_t class_id, const char *method_name, uint64_t *return_value);
+bool vm_get_current_method_return_type(arx_vm_context_t *vm, uint32_t *return_type_id);
 
 // Memory management and garbage collection
 
@@ -193,3 +195,12 @@ typedef enum {
 
 vm_error_t vm_get_last_error(arx_vm_context_t *vm);
 const char* vm_error_to_string(vm_error_t error);
+
+// Enhanced class registry functions
+const class_entry_t* vm_find_class_by_name(arx_vm_context_t *vm, const char *class_name);
+const class_entry_t* vm_find_class_by_id(arx_vm_context_t *vm, uint64_t class_id);
+const method_entry_t* vm_find_method_in_class(arx_vm_context_t *vm, uint64_t class_id, const char *method_name);
+const method_entry_t* vm_find_method_with_inheritance(arx_vm_context_t *vm, uint64_t class_id, const char *method_name);
+const field_entry_t* vm_find_field_in_class(arx_vm_context_t *vm, uint64_t class_id, const char *field_name);
+bool vm_is_class_inherited_from(arx_vm_context_t *vm, uint64_t child_class_id, uint64_t parent_class_id);
+uint64_t vm_calculate_class_instance_size(arx_vm_context_t *vm, uint64_t class_id);

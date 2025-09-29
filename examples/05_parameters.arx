@@ -1,0 +1,50 @@
+module Parameters;
+
+class App
+  procedure Main
+  begin
+    writeln('=== ARX Parameters Demo ===');
+    writeln('');
+    
+    // Test variables
+    integer x;
+    integer y;
+    integer result;
+    
+    x = 10;
+    y = 20;
+    
+    writeln('Before method calls: x = ' + x + ', y = ' + y);
+    writeln('');
+    
+    // Test procedure with parameters
+    writeln('--- Testing Procedure with Parameters ---');
+    testProcedure(x, y);
+    
+    // Test function with parameters and return value
+    writeln('--- Testing Function with Parameters ---');
+    result = addNumbers(x, y);
+    writeln('Result of addNumbers(' + x + ', ' + y + ') = ' + result);
+    
+    // Test with different values
+    writeln('--- Testing with Different Values ---');
+    result = addNumbers(5, 15);
+    writeln('Result of addNumbers(5, 15) = ' + result);
+    
+    writeln('');
+    writeln('=== Parameters Demo Complete ===');
+  end;
+  
+  procedure testProcedure(integer a, integer b)
+  begin
+    writeln('  Procedure called with a=' + a + ', b=' + b);
+    writeln('  Sum would be: ' + (a + b));
+  end;
+  
+  function addNumbers(integer a, integer b) : integer
+  begin
+    integer sum;
+    sum = a + b;
+    return sum;
+  end;
+end;

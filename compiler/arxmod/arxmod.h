@@ -74,7 +74,9 @@ typedef struct {
     uint64_t    method_id;         // Unique method ID
     uint64_t    offset;            // Offset from class base address
     uint32_t    parameter_count;   // Number of parameters
+    uint32_t    return_type_id;    // Return type ID (0 for procedures, type ID for functions)
     uint32_t    flags;             // Method flags (static, virtual, etc.)
+    uint32_t    reserved;          // Reserved for future use
 } method_entry_t;
 
 // Field entry for class manifest
@@ -83,7 +85,9 @@ typedef struct {
     uint64_t    field_id;          // Unique field ID
     uint64_t    offset;            // Offset from object base address
     uint32_t    type_id;           // Type ID (for type checking)
+    uint32_t    size;              // Field size in bytes
     uint32_t    flags;             // Field flags (private, protected, etc.)
+    uint32_t    reserved;          // Reserved for future use
 } field_entry_t;
 
 // Class table entry - self-contained with inline methods and fields
@@ -93,6 +97,7 @@ typedef struct {
     uint32_t    field_count;       // Number of fields
     uint32_t    method_count;      // Number of methods
     uint64_t    parent_class_id;   // Parent class ID (0 if none)
+    uint32_t    instance_size;     // Total size of class instance in bytes
     uint32_t    flags;             // Class flags
     uint32_t    reserved;          // Reserved for future use
     // Methods and fields are stored inline after this structure

@@ -207,23 +207,22 @@ bool linker_patch_bytecode(linker_context_t *linker, instruction_t *instructions
                 needs_patching = false;
             } else if (operand == OPR_OBJ_CALL_METHOD) {
                 // Method call - check if the previous instruction is a placeholder offset
+                printf("Linker: Found OPR_OBJ_CALL_METHOD at instruction %zu, checking previous instruction\n", i);
+                if (i > 0) {
+                    printf("Linker: Previous instruction %zu: opcode=%d, operand=%llu (0x%llx)\n", 
+                           i-1, instructions[i-1].opcode, (unsigned long long)instructions[i-1].opt64, 
+                           (unsigned long long)instructions[i-1].opt64);
+                    printf("Linker: Checking conditions: opcode==VM_LIT (%d): %s, operand==0xFFFF: %s\n",
+                           VM_LIT, (instructions[i-1].opcode == VM_LIT) ? "true" : "false",
+                           (instructions[i-1].opt64 == 0xFFFF) ? "true" : "false");
+                }
                 if (i > 0 && instructions[i-1].opcode == VM_LIT && instructions[i-1].opt64 == 0xFFFF) {
-                    // This is a method call with placeholder offset - we need to patch it
-                    // Use the actual method offset from the class manifest
+                    // This is a method call with placeholder offset - keep it as placeholder for runtime resolution
+                    // The VM will resolve method calls at runtime using the class manifest
                     
-                    if (patched_count < linker->method_count) {
-                        // Use the actual method offset from the methods array
-                        uint64_t method_offset = linker->methods[patched_count].offset;
-                        instructions[i-1].opt64 = method_offset;
-                        
-                        printf("Linker: Patched method call at instruction %zu with actual offset %llu (method: %s)\n", 
-                               i-1, (unsigned long long)method_offset, linker->methods[patched_count].method_name);
-                    } else {
-                        printf("Linker: Warning - method call at instruction %zu exceeds method count (%zu)\n", 
-                               i-1, linker->method_count);
-                        // Keep placeholder for now
-                        instructions[i-1].opt64 = 0xFFFF;
-                    }
+                    printf("Linker: Keeping method call placeholder at instruction %zu for runtime resolution\n", i-1);
+                    // Keep the 0xFFFF placeholder - VM will resolve it at runtime
+                    instructions[i-1].opt64 = 0xFFFF;
                     patched_count++;
                 }
                 // Don't patch the OPR_OBJ_CALL_METHOD instruction itself
