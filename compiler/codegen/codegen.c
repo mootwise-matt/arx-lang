@@ -633,6 +633,11 @@ bool build_class_separately(codegen_context_t *context, ast_node_t *class_node)
     // Store the current instruction count as the base offset for this class
     size_t class_base_offset = context->instruction_count;
     
+    if (debug_mode) {
+        printf("class_base_offset = %zu, context->instruction_count = %zu\n", 
+               class_base_offset, context->instruction_count);
+    }
+    
     // Append class instructions to main context
     for (size_t i = 0; i < class_context.instruction_count; i++) {
         emit_instruction(context, class_context.instructions[i].opcode, 

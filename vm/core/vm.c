@@ -1109,11 +1109,12 @@ bool vm_execute_operation(arx_vm_context_t *vm, opr_t operation, uint8_t level, 
                 }
                 
                 // Jump directly to method bytecode
-                vm->pc = method_offset;
+                // Subtract 1 because the main loop will increment PC after this instruction
+                vm->pc = method_offset - 1;
                 
                 if (vm->debug_mode) {
-                    printf("  Method call: jumped to PC=%llu, return address=%llu\n", 
-                           (unsigned long long)vm->pc, (unsigned long long)return_address);
+                    printf("  Method call: jumped to PC=%llu (will be %llu after increment), return address=%llu\n", 
+                           (unsigned long long)vm->pc, (unsigned long long)(vm->pc + 1), (unsigned long long)return_address);
                 }
                 
                 // Note: Return value will be handled by vm_return() when the method returns
