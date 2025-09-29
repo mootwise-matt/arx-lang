@@ -1931,8 +1931,9 @@ void generate_binary_op_ast(codegen_context_t *context, ast_node_t *node)
             is_string_concatenation = true;
         }
         
-        // Also check if the right operand is an identifier (variable) that needs to be converted to string
-        if (node->children[1] && node->children[1]->type == AST_IDENTIFIER) {
+        // Check if right operand is a string literal
+        if (node->children[1] && node->children[1]->type == AST_LITERAL && node->children[1]->value) {
+            // Right operand is a string literal, so this is string concatenation
             is_string_concatenation = true;
         }
         
@@ -2096,13 +2097,28 @@ bool codegen_find_variable(codegen_context_t *context, const char *name, size_t 
         return false;
     }
     
+    if (debug_mode) {
+        printf("Looking for variable '%s' in symbol table (count=%zu)\n", name, context->variable_count);
+        for (size_t i = 0; i < context->variable_count; i++) {
+            printf("  Variable %zu: '%s' at address %zu\n", i, 
+                   context->variable_names[i] ? context->variable_names[i] : "NULL", 
+                   context->variable_addresses[i]);
+        }
+    }
+    
     for (size_t i = 0; i < context->variable_count; i++) {
         if (context->variable_names[i] != NULL && strcmp(context->variable_names[i], name) == 0) {
             *address = context->variable_addresses[i];
+            if (debug_mode) {
+                printf("Found variable '%s' at address %zu\n", name, *address);
+            }
             return true;
         }
     }
     
+    if (debug_mode) {
+        printf("Variable '%s' not found in symbol table\n", name);
+    }
     return false;
 }
 

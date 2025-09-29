@@ -974,6 +974,13 @@ bool vm_execute_load(arx_vm_context_t *vm, uint8_t level, uint64_t offset)
     }
     
     uint64_t value = vm->memory[address];
+    
+    if (vm->debug_mode) {
+        printf("  VM_LOD: Loading value %llu from address %llu (base=%llu + offset=%llu)\n", 
+               (unsigned long long)value, (unsigned long long)address, 
+               (unsigned long long)base_addr, (unsigned long long)offset);
+    }
+    
     return vm_push(vm, value);
 }
 
@@ -993,6 +1000,12 @@ bool vm_execute_store(arx_vm_context_t *vm, uint8_t level, uint64_t offset)
     uint64_t value;
     if (!vm_pop(vm, &value)) {
         return false;
+    }
+    
+    if (vm->debug_mode) {
+        printf("  VM_STO: Storing value %llu at address %llu (base=%llu + offset=%llu)\n", 
+               (unsigned long long)value, (unsigned long long)address, 
+               (unsigned long long)base_addr, (unsigned long long)offset);
     }
     
     vm->memory[address] = value;
