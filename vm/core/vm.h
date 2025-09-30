@@ -31,6 +31,32 @@ typedef struct {
     uint64_t total_freed;         // Total memory freed
 } memory_manager_t;
 
+// Forward declare VM context for helper prototypes
+typedef struct arx_vm_context arx_vm_context_t;
+
+// String object layout (embedded header + inline UTF-8 data)
+// The string object occupies contiguous words in the VM object heap (stack-backed).
+// Layout (word-addressed, uint64_t units):
+//   [0] length   : number of bytes in string content (excluding NUL)
+//   [1] capacity : total byte capacity available for content (>= length)
+//   [2] data_off : word offset from base to first data word (typically 3)
+//   [3..] data   : UTF-8 bytes, NUL-terminated, packed into words
+// All string operations should treat strings as immutable and create new objects.
+typedef struct {
+    uint64_t length;
+    uint64_t capacity;
+    uint64_t data_offset_words;
+} vm_string_header_t;
+
+// String helpers (phase 1)
+// Create a new string object from a C string. Returns object base address.
+bool vm_string_create_from_cstr(arx_vm_context_t *vm, const char *cstr, uint64_t *out_object_address);
+// Get string length from object address.
+bool vm_string_get_length(arx_vm_context_t *vm, uint64_t object_address, uint64_t *out_length);
+// Obtain a transient C string view by copying bytes out of the object into a temporary buffer owned by the VM.
+// NOTE: For phase 1, provide a simple scratch buffer API suitable for debugging/output paths.
+bool vm_string_copy_to_buffer(arx_vm_context_t *vm, uint64_t object_address, char *dst, size_t dst_size);
+
 // VM execution context
 typedef struct arx_vm_context {
     // Instruction execution

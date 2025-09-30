@@ -706,42 +706,37 @@ bool vm_execute_operation(arx_vm_context_t *vm, opr_t operation, uint8_t level, 
             
         case OPR_OUTSTRING:
             {
-                uint64_t string_id;
-                if (vm_pop(vm, &string_id)) {
-                    if (vm->debug_mode) {
-                        printf("OPR_OUTSTRING: Popped string_id=%llu, string_count=%zu\n", 
-                               (unsigned long long)string_id, vm->string_table.string_count);
-                    }
-                    const char *str;
-                    if (vm_load_string(vm, string_id, &str)) {
-                        if (vm->debug_mode) {
-                            printf("OPR_OUTSTRING: Loaded string='%s'\n", str ? str : "(null)");
+                uint64_t val;
+                if (!vm_pop(vm, &val)) return false;
+                
+                // Check if it's a string object address (new system)
+                if (val + 2 < vm->stack_size) {
+                    uint64_t len = vm->stack[val + 0];
+                    uint64_t cap = vm->stack[val + 1];
+                    uint64_t off = vm->stack[val + 2];
+                    if (off == 3 && cap >= len && cap <= 1<<20) {
+                        size_t data_words = (cap + 1 + sizeof(uint64_t) - 1) / sizeof(uint64_t);
+                        if (val + off + data_words < vm->stack_size) {
+                            char buf[2048];
+                            const char *src = (const char*)&vm->stack[val + off];
+                            size_t to_copy = (len < (sizeof(buf) - 1)) ? (size_t)len : (sizeof(buf) - 1);
+                            memcpy(buf, src, to_copy);
+                            buf[to_copy] = '\0';
+                            printf("%s", buf);
+                            fflush(stdout);
+                            return true;
                         }
-                        // Output UTF-8 string
-                        if (vm->string_table.utf8_enabled) {
-                            // UTF-8 mode: output string as-is
-                            printf("%s", str);
-                        } else {
-                            // ASCII mode: filter non-ASCII characters
-                            for (const char *p = str; *p; p++) {
-                                if ((unsigned char)*p < 128) {
-                                    putchar(*p);
-                                }
-                            }
-                        }
-                        fflush(stdout);
-                        return true;
-                    } else {
-                        if (vm->debug_mode) {
-                            printf("Error: Failed to load string ID %llu (string_count=%zu)\n", 
-                                   (unsigned long long)string_id, vm->string_table.string_count);
-                        }
-                    }
-                } else {
-                    if (vm->debug_mode) {
-                        printf("Error: Failed to pop string ID from stack\n");
                     }
                 }
+                
+                // Fallback: treat as string ID (legacy system)
+                const char *str;
+                if (vm_load_string(vm, val, &str)) {
+                    printf("%s", str);
+                    fflush(stdout);
+                    return true;
+                }
+                
                 return false;
             }
             

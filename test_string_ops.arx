@@ -1,0 +1,19 @@
+module StringOpsTest;
+
+class App
+  procedure Main
+  begin
+    writeln('=== String Operations Test ===');
+    
+    // Test basic string.join
+    writeln(string.join('Hello', 'World'));
+    
+    // Test string.tostring
+    integer x;
+    x = 42;
+    writeln(string.tostring(x));
+    
+    // Test combined
+    writeln(string.join('Number: ', string.tostring(x)));
+  end;
+end;
