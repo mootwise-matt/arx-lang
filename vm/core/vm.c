@@ -484,6 +484,31 @@ bool vm_step(arx_vm_context_t *vm)
             success = vm_execute_storex(vm, level, operand);
             break;
             
+        case VM_STRING:
+            {
+                // Load string literal as object - operand is string ID
+                uint64_t string_id = operand;
+                const char *str;
+                if (!vm_load_string(vm, string_id, &str)) {
+                    success = false;
+                    break;
+                }
+                
+                // Create string object and push its address
+                uint64_t object_addr;
+                if (!vm_string_create_from_cstr(vm, str, &object_addr)) {
+                    success = false;
+                    break;
+                }
+                
+                if (!vm_push(vm, object_addr)) {
+                    success = false;
+                    break;
+                }
+                success = true;
+            }
+            break;
+            
         case VM_HALT:
             vm_halt(vm);
             break;
@@ -752,33 +777,40 @@ bool vm_execute_operation(arx_vm_context_t *vm, opr_t operation, uint8_t level, 
                 if (vm->debug_mode) {
                     printf("OPR_STR_CONCAT: Starting string concatenation at PC=%zu\n", vm->pc);
                 }
-                uint64_t str2_id, str1_id;
-                if (vm_pop(vm, &str2_id) && vm_pop(vm, &str1_id)) {
+                uint64_t str2_addr, str1_addr;
+                if (vm_pop(vm, &str2_addr) && vm_pop(vm, &str1_addr)) {
                     if (vm->debug_mode) {
-                        printf("OPR_STR_CONCAT: str1_id=%llu, str2_id=%llu, string_count=%zu\n", 
-                               (unsigned long long)str1_id, (unsigned long long)str2_id, vm->string_table.string_count);
+                        printf("OPR_STR_CONCAT: str1_addr=%llu, str2_addr=%llu\n", 
+                               (unsigned long long)str1_addr, (unsigned long long)str2_addr);
                     }
-                    const char *str1, *str2;
-                    if (vm_load_string(vm, str1_id, &str1) && vm_load_string(vm, str2_id, &str2)) {
+                    
+                    // Extract string content from string objects
+                    char str1_buf[1024], str2_buf[1024];
+                    if (vm_string_copy_to_buffer(vm, str1_addr, str1_buf, sizeof(str1_buf)) &&
+                        vm_string_copy_to_buffer(vm, str2_addr, str2_buf, sizeof(str2_buf))) {
+                        
                         if (vm->debug_mode) {
-                            printf("OPR_STR_CONCAT: str1='%s', str2='%s'\n", str1 ? str1 : "(null)", str2 ? str2 : "(null)");
+                            printf("OPR_STR_CONCAT: str1='%s', str2='%s'\n", str1_buf, str2_buf);
                         }
-                        // Simple concatenation for now
-                        char *result = malloc(strlen(str1) + strlen(str2) + 1);
+                        
+                        // Concatenate strings
+                        char *result = malloc(strlen(str1_buf) + strlen(str2_buf) + 1);
                         if (result != NULL) {
-                            strcpy(result, str1);
-                            strcat(result, str2);
-                            uint64_t result_id;
-                            if (vm_store_string(vm, result, &result_id)) {
+                            strcpy(result, str1_buf);
+                            strcat(result, str2_buf);
+                            
+                            // Create new string object
+                            uint64_t result_addr;
+                            if (vm_string_create_from_cstr(vm, result, &result_addr)) {
                                 if (vm->debug_mode) {
-                                    printf("OPR_STR_CONCAT: stored result='%s' with id=%llu, new string_count=%zu\n", 
-                                           result, (unsigned long long)result_id, vm->string_table.string_count);
+                                    printf("OPR_STR_CONCAT: created result object at address %llu\n", 
+                                           (unsigned long long)result_addr);
                                 }
                                 free(result);
-                                return vm_push(vm, result_id);
+                                return vm_push(vm, result_addr);
                             } else {
                                 if (vm->debug_mode) {
-                                    printf("OPR_STR_CONCAT: FAILED to store result string\n");
+                                    printf("OPR_STR_CONCAT: FAILED to create result string object\n");
                                 }
                                 free(result);
                             }
@@ -789,12 +821,12 @@ bool vm_execute_operation(arx_vm_context_t *vm, opr_t operation, uint8_t level, 
                         }
                     } else {
                         if (vm->debug_mode) {
-                            printf("OPR_STR_CONCAT: FAILED to load input strings\n");
+                            printf("OPR_STR_CONCAT: FAILED to extract string content from objects\n");
                         }
                     }
                 } else {
                     if (vm->debug_mode) {
-                        printf("OPR_STR_CONCAT: FAILED to pop string IDs from stack at PC=%zu\n", vm->pc);
+                        printf("OPR_STR_CONCAT: FAILED to pop string addresses from stack at PC=%zu\n", vm->pc);
                     }
                 }
                 return false;
@@ -802,11 +834,11 @@ bool vm_execute_operation(arx_vm_context_t *vm, opr_t operation, uint8_t level, 
             
         case OPR_STR_LEN:
             {
-                uint64_t string_id;
-                if (vm_pop(vm, &string_id)) {
-                    const char *str;
-                    if (vm_load_string(vm, string_id, &str)) {
-                        return vm_push(vm, strlen(str));
+                uint64_t string_addr;
+                if (vm_pop(vm, &string_addr)) {
+                    uint64_t length;
+                    if (vm_string_get_length(vm, string_addr, &length)) {
+                        return vm_push(vm, length);
                     }
                 }
                 return false;
@@ -839,15 +871,36 @@ bool vm_execute_operation(arx_vm_context_t *vm, opr_t operation, uint8_t level, 
             {
                 // Convert integer to string
                 uint64_t int_value;
+                if (vm->debug_mode) {
+                    printf("OPR_INT_TO_STR: Starting conversion at PC=%zu\n", vm->pc);
+                }
                 if (vm_pop(vm, &int_value)) {
+                    if (vm->debug_mode) {
+                        printf("OPR_INT_TO_STR: popped int_value=%llu\n", (unsigned long long)int_value);
+                    }
                     // Convert integer to string
                     char str_buffer[32];
                     snprintf(str_buffer, sizeof(str_buffer), "%lld", (long long)int_value);
                     
-                    // Store the string and get its ID
-                    uint64_t string_id;
-                    if (vm_store_string(vm, str_buffer, &string_id)) {
-                        return vm_push(vm, string_id);
+                    if (vm->debug_mode) {
+                        printf("OPR_INT_TO_STR: converted to string='%s'\n", str_buffer);
+                    }
+                    
+                    // Create string object
+                    uint64_t string_addr;
+                    if (vm_string_create_from_cstr(vm, str_buffer, &string_addr)) {
+                        if (vm->debug_mode) {
+                            printf("OPR_INT_TO_STR: created string object at address %llu\n", (unsigned long long)string_addr);
+                        }
+                        return vm_push(vm, string_addr);
+                    } else {
+                        if (vm->debug_mode) {
+                            printf("OPR_INT_TO_STR: FAILED to create string object\n");
+                        }
+                    }
+                } else {
+                    if (vm->debug_mode) {
+                        printf("OPR_INT_TO_STR: FAILED to pop integer from stack\n");
                     }
                 }
                 return false;
@@ -2055,6 +2108,108 @@ bool vm_push_call_stack(arx_vm_context_t *vm, uint64_t return_address)
     frame[3] = 0;              // Reserved
     
     vm->call_stack.current_frame++;
+    
+    return true;
+}
+
+// === String object helper functions (Phase 1) ===
+static size_t vm_string_words_for_capacity(size_t capacity)
+{
+    return (capacity + sizeof(uint64_t) - 1) / sizeof(uint64_t);
+}
+
+bool vm_string_create_from_cstr(arx_vm_context_t *vm, const char *cstr, uint64_t *out_object_address)
+{
+    if (vm == NULL || cstr == NULL || out_object_address == NULL) {
+        return false;
+    }
+    
+    size_t len = strlen(cstr);
+    size_t capacity = len + 1; // +1 for null terminator
+    size_t object_size = vm_string_words_for_capacity(capacity) * sizeof(uint64_t);
+    
+    // Find free memory for the string object
+    uint64_t object_addr = 0;
+    bool found = false;
+    
+    // Search for free memory starting from offset 10000
+    for (uint64_t addr = 10000; addr + object_size < vm->stack_size; addr += sizeof(uint64_t)) {
+        bool is_free = true;
+        for (size_t i = 0; i < object_size / sizeof(uint64_t); i++) {
+            if (vm->stack[addr + i] != 0) {
+                is_free = false;
+                break;
+            }
+        }
+        if (is_free) {
+            object_addr = addr;
+            found = true;
+            break;
+        }
+    }
+    
+    if (!found) {
+        if (vm->debug_mode) {
+            printf("vm_string_create_from_cstr: No free memory available\n");
+        }
+        return false;
+    }
+    
+    // Initialize string object header
+    vm->stack[object_addr + 0] = len;           // length
+    vm->stack[object_addr + 1] = capacity;      // capacity
+    vm->stack[object_addr + 2] = 3;             // data_offset (always 3 for phase 1)
+    
+    // Copy string data
+    char *data_ptr = (char*)&vm->stack[object_addr + 3];
+    memcpy(data_ptr, cstr, len);
+    data_ptr[len] = '\0'; // null terminator
+    
+    *out_object_address = object_addr;
+    return true;
+}
+
+bool vm_string_get_length(arx_vm_context_t *vm, uint64_t object_address, uint64_t *out_length)
+{
+    if (vm == NULL || out_length == NULL) {
+        return false;
+    }
+    
+    if (object_address + 2 >= vm->stack_size) {
+        return false;
+    }
+    
+    *out_length = vm->stack[object_address + 0];
+    return true;
+}
+
+bool vm_string_copy_to_buffer(arx_vm_context_t *vm, uint64_t object_address, char *dst, size_t dst_size)
+{
+    if (vm == NULL || dst == NULL || dst_size == 0) {
+        return false;
+    }
+    
+    if (object_address + 2 >= vm->stack_size) {
+        return false;
+    }
+    
+    uint64_t len = vm->stack[object_address + 0];
+    uint64_t cap = vm->stack[object_address + 1];
+    uint64_t off = vm->stack[object_address + 2];
+    
+    if (off != 3 || cap < len) {
+        return false;
+    }
+    
+    size_t data_words = (cap + 1 + sizeof(uint64_t) - 1) / sizeof(uint64_t);
+    if (object_address + off + data_words >= vm->stack_size) {
+        return false;
+    }
+    
+    const char *src = (const char*)&vm->stack[object_address + off];
+    size_t to_copy = (len < (dst_size - 1)) ? (size_t)len : (dst_size - 1);
+    memcpy(dst, src, to_copy);
+    dst[to_copy] = '\0';
     
     return true;
 }

@@ -31,7 +31,8 @@ typedef enum
     VM_JPC      = 7,        // jump if false (tos = 0) 0,a
     VM_LODX     = 8,        // load indexed v,d with offset loaded onto stack
     VM_STOX     = 9,        // store indexed v,d with offset loaded onto stack
-    VM_HALT     = 10        // halt execution
+    VM_STRING   = 10,       // load string literal as object 0,string_id
+    VM_HALT     = 11        // halt execution
 } opcode_t;
 
 // Operations for VM_OPR (stored in immediate field)

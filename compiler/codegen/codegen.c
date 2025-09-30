@@ -1101,8 +1101,8 @@ bool generate_writeln_statement(codegen_context_t *context, const char *string_l
     strcpy(context->string_literals[string_id], string_literal);
     context->string_literals_count++;
     
-    // Generate bytecode: LIT string_id, OPR OUTSTRING, OPR WRITELN
-    emit_instruction(context, VM_LIT, 0, string_id);
+    // Generate bytecode: VM_STRING string_id, OPR OUTSTRING, OPR WRITELN
+    emit_instruction(context, VM_STRING, 0, string_id);
     emit_instruction(context, VM_OPR, 0, OPR_OUTSTRING);
     emit_instruction(context, VM_OPR, 0, OPR_WRITELN);
     
@@ -1880,7 +1880,7 @@ void generate_literal_ast(codegen_context_t *context, ast_node_t *node)
             printf("Loading string literal '%s' at index %zu\n", node->value, string_index);
         }
         
-        emit_instruction(context, VM_LIT, 0, string_index);
+        emit_instruction(context, VM_STRING, 0, string_index);
     } else {
         // Number literal - load the actual value from the AST
         emit_instruction(context, VM_LIT, 0, node->number);
@@ -1903,6 +1903,19 @@ void generate_identifier_ast(codegen_context_t *context, ast_node_t *node)
     }
 }
 
+// Helper to detect whether an AST subtree contains any string literal
+static bool ast_contains_string_literal(ast_node_t *node)
+{
+    if (!node) return false;
+    if (node->type == AST_LITERAL && node->value) {
+        return true;
+    }
+    for (size_t i = 0; i < node->child_count; i++) {
+        if (ast_contains_string_literal(node->children[i])) return true;
+    }
+    return false;
+}
+
 void generate_binary_op_ast(codegen_context_t *context, ast_node_t *node)
 {
     if (!node || node->child_count < 2 || !node->value) return;
@@ -1920,37 +1933,17 @@ void generate_binary_op_ast(codegen_context_t *context, ast_node_t *node)
     
     // Generate the operation
     if (strcmp(node->value, "+") == 0) {
-        // Check if this is string concatenation or arithmetic addition
-        // We need to determine the context and operand types
-        
-        bool is_string_concatenation = false;
-        
-        // Check if left operand is a string literal
-        if (node->children[0] && node->children[0]->type == AST_LITERAL && node->children[0]->value) {
-            // Left operand is a string literal, so this is string concatenation
-            is_string_concatenation = true;
-        }
-        
-        // Also check if the right operand is an identifier (variable) that needs to be converted to string
-        if (node->children[1] && node->children[1]->type == AST_IDENTIFIER) {
-            is_string_concatenation = true;
-        }
-        
-        // If this is part of a complex string concatenation chain, treat as string concatenation
-        // This handles cases like: 'Addition: ' + a + ' + ' + b + ' = ' + result
-        if (node->children[0] && node->children[0]->type == AST_BINARY_OP && 
-            node->children[0]->value && strcmp(node->children[0]->value, "+") == 0) {
-            // Left operand is also a + operation, likely string concatenation
-            is_string_concatenation = true;
-        }
+        // Treat as string concatenation if EITHER subtree contains a string literal
+        bool is_string_concatenation = ast_contains_string_literal(node->children[0]) ||
+                                       ast_contains_string_literal(node->children[1]);
         
         if (is_string_concatenation) {
             // String concatenation
-            // Check if the right operand is an identifier (variable) that might be an integer
-            if (node->children[1] && node->children[1]->type == AST_IDENTIFIER) {
+            // If right operand is not a string literal, convert it to string
+            if (!(node->children[1] && node->children[1]->type == AST_LITERAL && node->children[1]->value)) {
                 emit_instruction(context, VM_OPR, 0, OPR_INT_TO_STR);
             }
-        emit_instruction(context, VM_OPR, 0, OPR_STR_CONCAT);
+            emit_instruction(context, VM_OPR, 0, OPR_STR_CONCAT);
         } else {
             // Arithmetic addition
             emit_instruction(context, VM_OPR, 0, OPR_ADD);
